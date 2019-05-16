@@ -33,6 +33,9 @@
 #include "stdio.h"
 #include "integrate.h"
 #include "math.h"
+#include <cstdlib>
+
+#define KOKKOS_USE_CHECKPOINT
 
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
@@ -83,6 +86,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   dtforce = dtforce / mass;
 
     int next_sort = sort_every>0?sort_every:ntimes+1;
+
+#ifdef KOKKOS_USE_CHECKPOINT
+    Kokkos::Experimental::StdFileSpace sfs;
+    auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
+    auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
+    auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
+#endif
 
     for(n = 0; n < ntimes; n++) {
 
@@ -182,5 +192,26 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       finalIntegrate();
 
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
+#ifdef KOKKOS_USE_CHECKPOINT
+      if ( n % 10 == 0 ) {
+         Kokkos::fence();
+         // setup directory...
+         std::stringstream iter_num;
+         iter_num << n << "/";
+         std::string path = "./data/";
+         mkdir(path.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); 
+         if( errno == EEXIST || errno == 0 ) {
+            path += iter_num.str();
+            mkdir(path.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            if (errno == EEXIST || errno == 0)
+               Kokkos::Experimental::StdFileSpace::set_default_path(path);
+            else
+               printf("failed to update checkpoint path: %d \n", errno );
+         } else {
+            printf("failed to set checkpoint path: %d \n", errno );
+         }
+         Kokkos::Experimental::StdFileSpace::checkpoint_views();
+      }
+#endif
     }
 }

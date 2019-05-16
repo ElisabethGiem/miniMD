@@ -38,7 +38,7 @@
 
 #define DELTA 20000
 
-Atom::Atom(int ntypes_)
+Atom::Atom(int ntypes_) : x("atom",0), v("velocity",0), f("force",0) 
 {
   natoms = 0;
   nlocal = 0;

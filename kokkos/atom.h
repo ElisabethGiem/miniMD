@@ -82,7 +82,7 @@ class Atom
 
     Box box;
 
-    Atom() {};
+    Atom() : x("atom",0), v("velocity",0), f("force",0)  {};
     Atom(int ntypes_);
     ~Atom();
 
