@@ -84,6 +84,7 @@ int main(int argc, char** argv)
   int sort = -1;
   int ntypes = 8;
   int team_neigh = 0;
+  int restart = 0;
 
   for(int i = 0; i < argc; i++) {
     if((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input_file") == 0)) {
@@ -133,6 +134,11 @@ int main(int argc, char** argv)
 
     if((strcmp(argv[i], "--skip_gpu") == 0)) {
       skip_gpu = atoi(argv[++i]);
+      continue;
+    }
+
+    if((strcmp(argv[i], "-r") == 0)) {
+      restart = atoi(argv[++i]);
       continue;
     }
 
@@ -505,6 +511,7 @@ int main(int argc, char** argv)
     fprintf(stdout, "\t# Use intrinsics: %i\n", force->use_sse);
     fprintf(stdout, "\t# Do safe exchange: %i\n", comm.do_safeexchange);
     fprintf(stdout, "\t# Size of float: %i\n\n", (int) sizeof(MMD_float));
+    fprintf(stdout, "\t# Restart: %i\n\n", restart);
   }
 
   comm.exchange(atom);
@@ -529,7 +536,7 @@ int main(int argc, char** argv)
   }
 
   timer.barrier_start(TIME_TOTAL);
-  integrate.run(atom, force, neighbor, comm, thermo, timer);
+  integrate.run(atom, force, neighbor, comm, thermo, timer, restart);
   timer.barrier_stop(TIME_TOTAL);
 
   int natoms;

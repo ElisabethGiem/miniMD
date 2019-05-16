@@ -73,7 +73,7 @@ void Integrate::operator() (TagFinalIntegrate, const int& i) const {
 }
 
 void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
-                    Comm &comm, Thermo &thermo, Timer &timer)
+                    Comm &comm, Thermo &thermo, Timer &timer, const int restart_)
 {
   int i, n;
 
@@ -86,15 +86,28 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   dtforce = dtforce / mass;
 
     int next_sort = sort_every>0?sort_every:ntimes+1;
+    int nStart = 0;
 
 #ifdef KOKKOS_USE_CHECKPOINT
     Kokkos::Experimental::StdFileSpace sfs;
     auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
     auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
     auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
+    nStart = restart_;
+
+// Load from restart ...
+    if (nStart > 0) {
+         std::stringstream iter_num;
+         iter_num << ((nStart / 10) * 10) << "/";
+         std::string path = "./data/";
+         path += iter_num.str();
+         Kokkos::Experimental::StdFileSpace::set_default_path(path);
+         // need to resize the views to match the checkpoint files ... 
+         Kokkos::Experimental::StdFileSpace::restore_all_views();
+    }
 #endif
 
-    for(n = 0; n < ntimes; n++) {
+    for(n = nStart; n < ntimes; n++) {
 
       Kokkos::fence();
 
@@ -203,10 +216,19 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          if( errno == EEXIST || errno == 0 ) {
             path += iter_num.str();
             mkdir(path.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-            if (errno == EEXIST || errno == 0)
-               Kokkos::Experimental::StdFileSpace::set_default_path(path);
-            else
-               printf("failed to update checkpoint path: %d \n", errno );
+            if (errno == EEXIST || errno == 0) {
+               if (comm.nprocs > 1) {
+                  std::stringstream proc_num;
+                  proc_num << comm.me << "/";
+                  path += proc_num.str();
+                  mkdir(path.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+               }
+               if (errno == EEXIST || errno == 0) {
+                  Kokkos::Experimental::StdFileSpace::set_default_path(path);
+               } else {
+                  printf("failed to update checkpoint path[%s]: %d \n", path.c_str(), errno ); 
+               }
+            }
          } else {
             printf("failed to set checkpoint path: %d \n", errno );
          }
