@@ -50,4 +50,11 @@ struct In {
   int thermo_nstat;
 };
 
+#ifdef MINIMD_RESILIENCE
+#include <resilience/veloc/veloc_backend.hpp>
+#include <memory>
+
+extern std::unique_ptr< KokkosResilience::VeloCCheckpointBackend > resilience_backend;
+#endif
+
 #endif

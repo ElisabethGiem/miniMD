@@ -34,6 +34,10 @@
 #include "integrate.h"
 #include "math.h"
 
+#ifdef MINIMD_RESILIENCE
+#include <resilience/checkpoint.hpp>
+#endif
+
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
 
@@ -94,7 +98,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       xold = atom.xold;
       nlocal = atom.nlocal;
 
+#ifdef MINIMD_RESILIENCE
+      KokkosResilience::checkpoint("initial", n, [self = *this]() mutable {
+        self.initialIntegrate();
+      }, *resilience_backend );
+#else
       initialIntegrate();
+#endif
 
       timer.stamp();
 
@@ -179,7 +189,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
+#ifdef MINIMD_RESILIENCE
+      KokkosResilience::checkpoint("final", n, [self = *this]() mutable {
+        self.finalIntegrate();
+      }, *resilience_backend );
+#else
       finalIntegrate();
+#endif
 
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
     }
