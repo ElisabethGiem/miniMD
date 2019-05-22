@@ -215,6 +215,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #else
          Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", n, comm.me);
 #endif
+         CHECKPOINT_FILESPACE::checkpoint_create_view_targets();  // this is to prevent race condition in creating / opening file.
          CHECKPOINT_FILESPACE::checkpoint_views();
       }
 #endif

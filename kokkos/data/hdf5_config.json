@@ -6,15 +6,16 @@
          "rank":1,
          "layout":"REGULAR",
          "data_extents":["{DATA_SIZE}"],
-         "local_extents":["{DATA_SIZE}"],
+         "local_extents":["{DATA_SIZE}/{MPI_SIZE}"],
          "offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"],
          "stride":["{DATA_SIZE}"],
          "count":["1","1","1","1"],
          "block":["{DATA_SIZE}/{MPI_SIZE}"],
-         "local_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})","0","0","0"],
+         "local_offset":["0","0","0","0"],
          "local_stride":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
          "local_count":["1","1","1","1"],
-         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"]
+         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
+         "view_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"]
       }
    },
    {
@@ -24,15 +25,16 @@
          "rank":1,
          "layout":"REGULAR",
          "data_extents":["{DATA_SIZE}"],
-         "local_extents":["{DATA_SIZE}"],
+         "local_extents":["{DATA_SIZE}/{MPI_SIZE}"],
          "offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"],
          "stride":["{DATA_SIZE}"],
          "count":["1","1","1","1"],
          "block":["{DATA_SIZE}/{MPI_SIZE}"],
-         "local_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})","0","0","0"],
+         "local_offset":["0","0","0","0"],
          "local_stride":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
          "local_count":["1","1","1","1"],
-         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"]
+         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
+         "view_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"]
       }
    },
    {
@@ -42,15 +44,16 @@
          "rank":1,
          "layout":"REGULAR",
          "data_extents":["{DATA_SIZE}"],
-         "local_extents":["{DATA_SIZE}"],
+         "local_extents":["{DATA_SIZE}/{MPI_SIZE}"],
          "offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"],
          "stride":["{DATA_SIZE}"],
          "count":["1","1","1","1"],
          "block":["{DATA_SIZE}/{MPI_SIZE}"],
-         "local_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})","0","0","0"],
+         "local_offset":["0","0","0","0"],
          "local_stride":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
          "local_count":["1","1","1","1"],
-         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"]
+         "local_block":["{DATA_SIZE}/{MPI_SIZE}","1","1","1"],
+         "view_offset":["{MPI_RANK}*({DATA_SIZE}/{MPI_SIZE})"]
       }
    }
 ]
