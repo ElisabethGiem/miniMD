@@ -101,7 +101,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef MINIMD_RESILIENCE
       KokkosResilience::checkpoint("initial", n, [self = *this]() mutable {
         self.initialIntegrate();
-      }, *resilience_backend );
+      }, *resilience_backend, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
 #else
       initialIntegrate();
 #endif
@@ -192,7 +192,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef MINIMD_RESILIENCE
       KokkosResilience::checkpoint("final", n, [self = *this]() mutable {
         self.finalIntegrate();
-      }, *resilience_backend );
+      }, *resilience_backend, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
 #else
       finalIntegrate();
 #endif
