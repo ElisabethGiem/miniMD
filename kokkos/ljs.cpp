@@ -57,7 +57,7 @@ void output(In &, Atom &, Force*, Neighbor &, Comm &,
 int read_lammps_data(Atom &atom, Comm &comm, Neighbor &neighbor, Integrate &integrate, Thermo &thermo, char* file, int units);
 
 #ifdef MINIMD_RESILIENCE
-std::unique_ptr< KokkosResilience::VeloCCheckpointBackend > resilience_backend;
+std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
 #endif
 
 int main(int argc, char** argv)
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   
 #ifdef MINIMD_RESILIENCE
-  resilience_backend = std::make_unique< KokkosResilience::VeloCCheckpointBackend >(MPI_COMM_WORLD, "minimd.cfg");
+  resilience_context = std::make_unique< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > >(MPI_COMM_WORLD, "minimd.cfg");
 #endif
   
   int error = 0;
@@ -572,6 +572,11 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
   }
   // End Scope Guard
+
+
+#ifdef MINIMD_RESILIENCE
+  resilience_context.reset();
+#endif
 
   Kokkos::finalize();
   MPI_Finalize();

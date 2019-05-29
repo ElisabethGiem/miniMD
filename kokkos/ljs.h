@@ -51,10 +51,10 @@ struct In {
 };
 
 #ifdef MINIMD_RESILIENCE
-#include <resilience/veloc/veloc_backend.hpp>
+#include <resilience/context.hpp>
 #include <memory>
 
-extern std::unique_ptr< KokkosResilience::VeloCCheckpointBackend > resilience_backend;
+extern std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
 #endif
 
 #endif

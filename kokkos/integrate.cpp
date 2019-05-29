@@ -89,6 +89,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     int next_sort = sort_every>0?sort_every:ntimes+1;
 
     for(n = 0; n < ntimes; n++) {
+#ifdef MINIMD_RESILIENCE
+      auto iter_time = KokkosResilience::Util::begin_trace< KokkosResilience::Util::IterTimingTrace< std::string > >( *resilience_context, "step", n );
+#endif
 
       Kokkos::fence();
 
@@ -99,9 +102,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       nlocal = atom.nlocal;
 
 #ifdef MINIMD_RESILIENCE
-      KokkosResilience::checkpoint("initial", n, [self = *this]() mutable {
+      KokkosResilience::checkpoint( *resilience_context, "initial", n, [self = *this]() mutable {
         self.initialIntegrate();
-      }, *resilience_backend, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
 #else
       initialIntegrate();
 #endif
@@ -190,9 +193,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       Kokkos::fence();
 
 #ifdef MINIMD_RESILIENCE
-      KokkosResilience::checkpoint("final", n, [self = *this]() mutable {
+      KokkosResilience::checkpoint( *resilience_context, "final", n, [self = *this]() mutable {
         self.finalIntegrate();
-      }, *resilience_backend, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
 #else
       finalIntegrate();
 #endif
