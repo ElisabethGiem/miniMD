@@ -99,10 +99,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
 // Load from restart ...
     if (nStart > 0) {
+         bool bCreateDir = comm.me == 0 ? true : false;
 #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", (int)((nStart / 10) * 10));
+         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(bCreateDir, "./data", (int)((nStart / 10) * 10));
 #else
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", (int)((nStart / 10) * 10), comm.me);
+         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(bCreateDir, "./data", (int)((nStart / 10) * 10), comm.me);
 #endif
          // need to resize the views to match the checkpoint files ... 
          CHECKPOINT_FILESPACE::restore_all_views();
@@ -210,10 +211,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef KOKKOS_USE_CHECKPOINT
       if ( n % 10 == 0 ) {
          Kokkos::fence();
+         bool bCreateDir = comm.me == 0 ? true : false;
+        
 #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", n);
+         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(bCreateDir, "./data", n);
 #else
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", n, comm.me);
+         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(bCreateDir, "./data", n, comm.me);
 #endif
          CHECKPOINT_FILESPACE::checkpoint_views();
       }
