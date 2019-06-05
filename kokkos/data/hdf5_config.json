@@ -15,7 +15,7 @@
          "local_stride":["1","1","1","1"],
          "local_count":["1","1","1","1"],
          "local_block":["{DATA_SIZE}","1","1","1"],
-         "view_offset":["0"]
+         "view_offset":["0","0"]
       }
    },
    {
@@ -34,7 +34,7 @@
          "local_stride":["1","1","1","1"],
          "local_count":["1","1","1","1"],
          "local_block":["{DATA_SIZE}","1","1","1"],
-         "view_offset":["0"]
+         "view_offset":["0","0"]
       }
    },
    {
@@ -53,7 +53,7 @@
          "local_stride":["1","1","1","1"],
          "local_count":["1","1","1","1"],
          "local_block":["{DATA_SIZE}","1","1","1"],
-         "view_offset":["0"]
+         "view_offset":["0","0"]
       }
    }
 ]
