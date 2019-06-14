@@ -36,8 +36,10 @@
 #include <cstdlib>
 
 #define KOKKOS_USE_CHECKPOINT
-//#define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
-#define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+#ifdef KOKKOS_USE_CHECKPOINT
+   #include <Kokkos_Resilience.hpp>
+#endif
+
 
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
@@ -91,7 +93,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     int nStart = 0;
 
 #ifdef KOKKOS_USE_CHECKPOINT
-    CHECKPOINT_FILESPACE sfs;
+    Kokkos::Experimental::StdFileSpace sfs;
     auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
     auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
     auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
@@ -99,13 +101,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
 // Load from restart ...
     if (nStart > 0) {
-#ifdef KOKKOS_ENABLE_HDF5_PARALLEL
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", (int)((nStart / 10) * 10));
-#else
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", (int)((nStart / 10) * 10), comm.me);
-#endif
+         if (comm.nprocs > 1)
+            Kokkos::Experimental::DirectoryManager<Kokkos::Experimental::StdFileSpace>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10));
+         else
+            Kokkos::Experimental::DirectoryManager<Kokkos::Experimental::StdFileSpace>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10), comm.me);
          // need to resize the views to match the checkpoint files ... 
-         CHECKPOINT_FILESPACE::restore_all_views();
+         Kokkos::Experimental::StdFileSpace::restore_all_views();
     }
 #endif
 
@@ -210,12 +211,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef KOKKOS_USE_CHECKPOINT
       if ( n % 10 == 0 ) {
          Kokkos::fence();
-#ifdef KOKKOS_ENABLE_HDF5_PARALLEL
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", n);
-#else
-         Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory("./data", n, comm.me);
-#endif
-         CHECKPOINT_FILESPACE::checkpoint_views();
+         if (comm.nprocs > 1) 
+            Kokkos::Experimental::DirectoryManager<Kokkos::Experimental::StdFileSpace>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n);
+         else
+            Kokkos::Experimental::DirectoryManager<Kokkos::Experimental::StdFileSpace>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n, comm.me);
       }
 #endif
     }
