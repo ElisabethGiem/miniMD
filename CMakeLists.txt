@@ -21,8 +21,6 @@ find_package(MPI REQUIRED)
 target_link_libraries(minimd PRIVATE MPI::MPI_CXX)
 
 find_package(Kokkos REQUIRED NO_CMAKE_PACKAGE_REGISTRY)
-target_include_directories(kokkos INTERFACE ${Kokkos_INCLUDE_DIRS})
-message(STATUS "Kokkos include dirs: ${Kokkos_INCLUDE_DIRS}")
 
 # Optional resilience
 if(MINIMD_RESILIENCE)
@@ -32,7 +30,7 @@ if(MINIMD_RESILIENCE)
 endif()
 
 
-target_link_libraries(minimd PRIVATE kokkos)
+TARGET_LINK_KOKKOS(minimd PRIVATE)
 
 target_link_libraries(minimd PRIVATE "-L${resilience_LINK_DIRECTORIES}")
 

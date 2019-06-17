@@ -75,6 +75,7 @@ default: all
 
 MAKEFILE_PATH := $(subst Makefile,,$(abspath $(lastword $(MAKEFILE_LIST))))
 include $(KOKKOS_PATH)/Makefile.kokkos
+include $(KOKKOS_RESILIENCE_PATH)/Makefile.resilience
 
 SRC = $(wildcard $(MAKEFILE_PATH)*.cpp)
 HEADERS = $(wildcard $(MAKEFILE_PATH)*.hpp)
