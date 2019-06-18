@@ -12,7 +12,8 @@ else()
   target_compile_definitions(minimd PRIVATE PRECISION=2)
 endif()
 
-option(MINIMD_RESILIENCE "Use resilience" OFF)
+option(MINIMD_AUTOMATIC_CHECKPOINT "Use resilience automatic checkpointing" OFF)
+option(MINIMD_MANUAL_CHECKPOINT "Use resilience manual checkpointing" OFF)
 
 target_compile_definitions(minimd PRIVATE PREC_TIMER)
 
@@ -23,12 +24,17 @@ target_link_libraries(minimd PRIVATE MPI::MPI_CXX)
 find_package(Kokkos REQUIRED NO_CMAKE_PACKAGE_REGISTRY)
 
 # Optional resilience
-if(MINIMD_RESILIENCE)
+if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT)
   find_package(resilience REQUIRED)
   target_link_libraries(minimd PRIVATE Kokkos::resilience)
   target_compile_definitions(minimd PRIVATE MINIMD_RESILIENCE)
+  if(MINIMD_AUTOMATIC_CHECKPOINT)
+     target_compile_definitions(minimd PRIVATE KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT)
+  endif()
+  if(MINIMD_MANUAL_CHECKPOINT)
+     target_compile_definitions(minimd PRIVATE KOKKOS_ENABLE_MANUAL_CHECKPOINT)
+  endif()
 endif()
-
 
 TARGET_LINK_KOKKOS(minimd PRIVATE)
 

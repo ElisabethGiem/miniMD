@@ -50,4 +50,14 @@ struct In {
   int thermo_nstat;
 };
 
+#ifdef MINIMD_RESILIENCE
+   #include <Kokkos_Resilience.hpp>
+   #include <memory>
+#ifdef KOKKOS_ENABLE_VELOC
+   extern std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
+#else
+   extern std::unique_ptr< KokkosResilience::Context< > > resilience_context;
+#endif
+#endif
+
 #endif

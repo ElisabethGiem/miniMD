@@ -35,12 +35,10 @@
 #include "math.h"
 #include <cstdlib>
 
-#define KOKKOS_USE_CHECKPOINT
 #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
-#ifdef KOKKOS_USE_CHECKPOINT
+#ifdef MINIMD_RESILIENCE
    #include <Kokkos_Resilience.hpp>
 #endif
-
 
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
@@ -93,7 +91,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     int next_sort = sort_every>0?sort_every:ntimes+1;
     int nStart = 0;
 
-#ifdef KOKKOS_USE_CHECKPOINT
+#ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
     Kokkos::Experimental::StdFileSpace sfs;
     auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
     auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
@@ -112,6 +110,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #endif
 
     for(n = nStart; n < ntimes; n++) {
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      auto iter_time = KokkosResilience::Util::begin_trace< KokkosResilience::Util::IterTimingTrace< std::string > >( *resilience_context, "step", n );
+#endif
 
       Kokkos::fence();
 
@@ -121,7 +122,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       xold = atom.xold;
       nlocal = atom.nlocal;
 
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      KokkosResilience::checkpoint( *resilience_context, "initial", n, [self = *this]() mutable {
+        self.initialIntegrate();
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+#else
       initialIntegrate();
+#endif
 
       timer.stamp();
 
@@ -206,10 +213,16 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      KokkosResilience::checkpoint( *resilience_context, "final", n, [self = *this]() mutable {
+        self.finalIntegrate();
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+#else
       finalIntegrate();
+#endif
 
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
-#ifdef KOKKOS_USE_CHECKPOINT
+#ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
       if ( n % 10 == 0 ) {
          Kokkos::fence();
          if (comm.nprocs > 1) 

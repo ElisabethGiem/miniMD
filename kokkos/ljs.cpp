@@ -56,6 +56,14 @@ void output(In &, Atom &, Force*, Neighbor &, Comm &,
             Thermo &, Integrate &, Timer &, int);
 int read_lammps_data(Atom &atom, Comm &comm, Neighbor &neighbor, Integrate &integrate, Thermo &thermo, char* file, int units);
 
+#ifdef MINIMD_RESILIENCE
+   #ifdef KOKKOS_ENABLE_VELOC
+      std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
+   #else
+      std::unique_ptr< KokkosResilience::Context< > > resilience_context;
+   #endif
+#endif
+
 int main(int argc, char** argv)
 {
   In in;
@@ -96,7 +104,15 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &me);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
+  
+#ifdef MINIMD_RESILIENCE
+   #ifdef KOKKOS_ENABLE_VELOC
+      resilience_context = std::make_unique< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > >(MPI_COMM_WORLD, "minimd.cfg");
+   #else
+      resilience_context = std::make_unique< KokkosResilience::Context< > >();
+   #endif
+#endif
+  
   int error = 0;
 
   if(input_file == NULL)
@@ -571,6 +587,11 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
   }
   // End Scope Guard
+
+
+#ifdef MINIMD_RESILIENCE
+   resilience_context.reset();
+#endif
 
   Kokkos::finalize();
   MPI_Finalize();
