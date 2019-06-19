@@ -111,7 +111,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
     for(n = nStart; n < ntimes; n++) {
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+    #ifdef KR_ENABLE_TRACING
       auto iter_time = KokkosResilience::Util::begin_trace< KokkosResilience::Util::IterTimingTrace< std::string > >( *resilience_context, "step", n );
+    #endif
 #endif
 
       Kokkos::fence();
