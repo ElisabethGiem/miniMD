@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.12)
 project(minimd)
 
 add_executable(minimd)
-target_compile_features(minimd PRIVATE cxx_std_14)
+    # Require C++14
+if (CMAKE_CXX_COMPILER MATCHES ".*nvcc_wrapper" )
+    message("nvcc wrapper requires that CXX standard by set in kokkos build")
+else()
+   target_compile_features(resilience PUBLIC cxx_std_14)
+endif()
 
 # Options
 option(MINIMD_SINGLE_PRECISION, "Use single precision" OFF)
@@ -18,13 +23,23 @@ option(MINIMD_MANUAL_CHECKPOINT "Use resilience manual checkpointing" OFF)
 target_compile_definitions(minimd PRIVATE PREC_TIMER)
 
 # Dependencies
-find_package(MPI REQUIRED)
-target_link_libraries(minimd PRIVATE MPI::MPI_CXX)
+if (MINIMD_USE_MPISTUB)
+   find_library( mpi_stub_ NAMES libmpi_stubs.a libmpi_stubs mpi_stubs HINTS ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs ) 
+   #add_library(mpi_stubs)
+   #target_link_libraries(minimd PRIVATE mpi_stubs)
+   target_link_libraries(minimd PRIVATE ${mpi_stub_})
+   target_include_directories(minimd PUBLIC
+                           ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs
+                           )
+else()
+   find_package(MPI REQUIRED)
+   target_link_libraries(minimd PRIVATE MPI::MPI_CXX)
+endif()
 
 find_package(Kokkos REQUIRED NO_CMAKE_PACKAGE_REGISTRY)
 
 # Optional resilience
-if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT)
+if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT OR MINIMD_RESILIENT_EXECUTION)
   find_package(resilience REQUIRED)
   target_link_libraries(minimd PRIVATE Kokkos::resilience)
   target_compile_definitions(minimd PRIVATE MINIMD_RESILIENCE)
@@ -33,6 +48,9 @@ if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT)
   endif()
   if(MINIMD_MANUAL_CHECKPOINT)
      target_compile_definitions(minimd PRIVATE KOKKOS_ENABLE_MANUAL_CHECKPOINT)
+  endif()
+  if(MINIMD_RESILIENT_EXECUTION)
+     target_compile_definitions(minimd PRIVATE KOKKOS_ENABLE_RESILIENT_EXECUTION)
   endif()
 endif()
 
@@ -55,9 +73,9 @@ add_custom_command(TARGET minimd PRE_BUILD
 add_subdirectory(kokkos)
 
 
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
+##get_cmake_property(_variableNames VARIABLES)
+##list (SORT _variableNames)
+##foreach (_variableName ${_variableNames})
+##    message(STATUS "${_variableName}=${${_variableName}}")
+##endforeach()
 
