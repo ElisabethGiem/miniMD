@@ -336,6 +336,18 @@ int main(int argc, char** argv)
   // Scope Guard
   {
 
+  if (system_size < 20) {
+     Atom::set_atom_block_size(10000);
+  } else if (system_size < 41) {
+     Atom::set_atom_block_size(100000);
+  } else if (system_size < 61) {
+     Atom::set_atom_block_size(200000);
+  } else if (system_size < 81) {
+     Atom::set_atom_block_size(500000);
+  } else {
+     Atom::set_atom_block_size(1000000);
+  }
+
   Atom atom(ntypes);
   Neighbor neighbor(ntypes);
   Integrate integrate;
@@ -476,21 +488,30 @@ int main(int argc, char** argv)
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
   } else {
+    printf("creating box\n");
     create_box(atom, in.nx, in.ny, in.nz, in.rho);
 
+    printf("comm setup\n");
     comm.setup(neighbor.cutneigh, atom);
 
+    printf("neighbor setup\n");
     neighbor.setup(atom);
 
+    printf("integration setup\n");
     integrate.setup();
 
+    printf("force setup\n");
     force->setup();
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
 
+    printf("atom setup\n");
     create_atoms(atom, in.nx, in.ny, in.nz, in.rho);
+
+    printf("thermo setup\n");
     thermo.setup(in.rho, integrate, atom, in.units);
 
+    printf("velocity setup\n");
     create_velocity(in.t_request, atom, thermo);
 
   }

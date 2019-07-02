@@ -40,6 +40,12 @@
    #include <Kokkos_Resilience.hpp>
 #endif
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+   #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
+#else
+   #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
+#endif
+
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
 
@@ -50,7 +56,7 @@ void Integrate::setup()
 
 void Integrate::initialIntegrate()
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<TagInitialIntegrate>(0,nlocal), *this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagInitialIntegrate>(0,nlocal), *this);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -65,7 +71,7 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate()
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<TagFinalIntegrate>(0,nlocal), *this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagFinalIntegrate>(0,nlocal), *this);
 }
 
 KOKKOS_INLINE_FUNCTION

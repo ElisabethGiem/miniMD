@@ -57,6 +57,9 @@ class Atom
     struct TagAtomUnpackReverse {};
     struct TagAtomSort {};
 
+    static int atom_block;
+    static void set_atom_block_size(int size_);
+
     typedef int value_type;
     int natoms;
     int nlocal, nghost;
