@@ -35,7 +35,12 @@
 #include "math.h"
 #include <cstdlib>
 
-#define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+#ifdef KOKKOS_ENABLE_HDF5
+   #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+#else
+   #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+#endif
+
 #ifdef MINIMD_RESILIENCE
    #include <Kokkos_Resilience.hpp>
 #endif
@@ -43,7 +48,11 @@
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
    #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
 #else
-   #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
+   #ifdef KOKKOS_ENABLE_CUDA
+      #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
+   #else
+      #define DEVICE_EXECUTION_SPACE Kokkos::OpenMP
+   #endif
 #endif
 
 Integrate::Integrate() {sort_every=20;}
