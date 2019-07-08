@@ -6,7 +6,7 @@ add_executable(minimd)
 if (CMAKE_CXX_COMPILER MATCHES ".*nvcc_wrapper" )
     message("nvcc wrapper requires that CXX standard by set in kokkos build")
 else()
-   target_compile_features(resilience PUBLIC cxx_std_14)
+   target_compile_features(minimd PUBLIC cxx_std_14)
 endif()
 
 # Options
