@@ -488,30 +488,30 @@ int main(int argc, char** argv)
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
   } else {
-    printf("creating box\n");
+    //printf("creating box\n");
     create_box(atom, in.nx, in.ny, in.nz, in.rho);
 
-    printf("comm setup\n");
+    //printf("comm setup\n");
     comm.setup(neighbor.cutneigh, atom);
 
-    printf("neighbor setup\n");
+   // printf("neighbor setup\n");
     neighbor.setup(atom);
 
-    printf("integration setup\n");
+   // printf("integration setup\n");
     integrate.setup();
 
-    printf("force setup\n");
+   // printf("force setup\n");
     force->setup();
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
 
-    printf("atom setup\n");
+   // printf("atom setup\n");
     create_atoms(atom, in.nx, in.ny, in.nz, in.rho);
 
-    printf("thermo setup\n");
+   // printf("thermo setup\n");
     thermo.setup(in.rho, integrate, atom, in.units);
 
-    printf("velocity setup\n");
+   // printf("velocity setup\n");
     create_velocity(in.t_request, atom, thermo);
 
   }

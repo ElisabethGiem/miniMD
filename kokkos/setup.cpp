@@ -359,7 +359,7 @@ int create_atoms(Atom &atom, int nx, int ny, int nz, double rho)
 
   int iflag = 0;
 
-  printf("main atom setup loop \n");
+  //printf("main atom setup loop \n");
   while(oz * subboxdim <= khi) {
     k = oz * subboxdim + sz;
     j = oy * subboxdim + sy;

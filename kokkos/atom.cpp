@@ -66,8 +66,8 @@ Atom::~Atom()
 
 void Atom::growarray()
 {
-  printf("grow array: %ld\n", nmax);
-  fflush(stdout);
+//  printf("grow array: %ld\n", nmax);
+//  fflush(stdout);
   nmax += atom_block;
   Kokkos::resize(x,nmax);
   Kokkos::resize(v,nmax);
