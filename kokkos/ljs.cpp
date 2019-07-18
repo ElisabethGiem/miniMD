@@ -56,6 +56,14 @@ void output(In &, Atom &, Force*, Neighbor &, Comm &,
             Thermo &, Integrate &, Timer &, int);
 int read_lammps_data(Atom &atom, Comm &comm, Neighbor &neighbor, Integrate &integrate, Thermo &thermo, char* file, int units);
 
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+   #ifdef KOKKOS_ENABLE_VELOC
+      std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
+   #else
+      std::unique_ptr< KokkosResilience::Context< > > resilience_context;
+   #endif
+#endif
+
 int main(int argc, char** argv)
 {
   In in;
@@ -84,6 +92,7 @@ int main(int argc, char** argv)
   int sort = -1;
   int ntypes = 8;
   int team_neigh = 0;
+  int restart = 0;
 
   for(int i = 0; i < argc; i++) {
     if((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input_file") == 0)) {
@@ -95,7 +104,15 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &me);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
+  
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+   #ifdef KOKKOS_ENABLE_VELOC
+      resilience_context = std::make_unique< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > >(MPI_COMM_WORLD, "minimd.cfg");
+   #else
+      resilience_context = std::make_unique< KokkosResilience::Context< > >();
+   #endif
+#endif
+  
   int error = 0;
 
   if(input_file == NULL)
@@ -133,6 +150,11 @@ int main(int argc, char** argv)
 
     if((strcmp(argv[i], "--skip_gpu") == 0)) {
       skip_gpu = atoi(argv[++i]);
+      continue;
+    }
+
+    if((strcmp(argv[i], "-r") == 0)) {
+      restart = atoi(argv[++i]);
       continue;
     }
 
@@ -314,6 +336,18 @@ int main(int argc, char** argv)
   // Scope Guard
   {
 
+  if (system_size < 20) {
+     Atom::set_atom_block_size(10000);
+  } else if (system_size < 41) {
+     Atom::set_atom_block_size(100000);
+  } else if (system_size < 61) {
+     Atom::set_atom_block_size(200000);
+  } else if (system_size < 81) {
+     Atom::set_atom_block_size(500000);
+  } else {
+     Atom::set_atom_block_size(1000000);
+  }
+
   Atom atom(ntypes);
   Neighbor neighbor(ntypes);
   Integrate integrate;
@@ -454,21 +488,30 @@ int main(int argc, char** argv)
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
   } else {
+    //printf("creating box\n");
     create_box(atom, in.nx, in.ny, in.nz, in.rho);
 
+    //printf("comm setup\n");
     comm.setup(neighbor.cutneigh, atom);
 
+   // printf("neighbor setup\n");
     neighbor.setup(atom);
 
+   // printf("integration setup\n");
     integrate.setup();
 
+   // printf("force setup\n");
     force->setup();
 
     if(in.forcetype == FORCEEAM) atom.mass = force->mass;
 
+   // printf("atom setup\n");
     create_atoms(atom, in.nx, in.ny, in.nz, in.rho);
+
+   // printf("thermo setup\n");
     thermo.setup(in.rho, integrate, atom, in.units);
 
+   // printf("velocity setup\n");
     create_velocity(in.t_request, atom, thermo);
 
   }
@@ -505,6 +548,7 @@ int main(int argc, char** argv)
     fprintf(stdout, "\t# Use intrinsics: %i\n", force->use_sse);
     fprintf(stdout, "\t# Do safe exchange: %i\n", comm.do_safeexchange);
     fprintf(stdout, "\t# Size of float: %i\n\n", (int) sizeof(MMD_float));
+    fprintf(stdout, "\t# Restart: %i\n\n", restart);
   }
 
   comm.exchange(atom);
@@ -529,7 +573,7 @@ int main(int argc, char** argv)
   }
 
   timer.barrier_start(TIME_TOTAL);
-  integrate.run(atom, force, neighbor, comm, thermo, timer);
+  integrate.run(atom, force, neighbor, comm, thermo, timer, restart);
   timer.barrier_stop(TIME_TOTAL);
 
   int natoms;
@@ -564,6 +608,11 @@ int main(int argc, char** argv)
   MPI_Barrier(MPI_COMM_WORLD);
   }
   // End Scope Guard
+
+
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+   resilience_context.reset();
+#endif
 
   Kokkos::finalize();
   MPI_Finalize();

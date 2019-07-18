@@ -119,6 +119,7 @@ class Neighbor
 
     KOKKOS_INLINE_FUNCTION
     MMD_float bindist(int, int, int);   // distance between binx
+
     KOKKOS_INLINE_FUNCTION
     int coord2bin(MMD_float, MMD_float, MMD_float) const;   // mapping atom coord to a bin
 

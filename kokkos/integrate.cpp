@@ -33,6 +33,27 @@
 #include "stdio.h"
 #include "integrate.h"
 #include "math.h"
+#include <cstdlib>
+
+#ifdef KOKKOS_ENABLE_HDF5
+   #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+#else
+   #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+#endif
+
+#ifdef MINIMD_RESILIENCE
+   #include <Kokkos_Resilience.hpp>
+#endif
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+   #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
+#else
+   #ifdef KOKKOS_ENABLE_CUDA
+      #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
+   #else
+      #define DEVICE_EXECUTION_SPACE Kokkos::OpenMP
+   #endif
+#endif
 
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
@@ -44,7 +65,7 @@ void Integrate::setup()
 
 void Integrate::initialIntegrate()
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<TagInitialIntegrate>(0,nlocal), *this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagInitialIntegrate>(0,nlocal), *this);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -59,7 +80,7 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate()
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<TagFinalIntegrate>(0,nlocal), *this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagFinalIntegrate>(0,nlocal), *this);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -70,7 +91,7 @@ void Integrate::operator() (TagFinalIntegrate, const int& i) const {
 }
 
 void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
-                    Comm &comm, Thermo &thermo, Timer &timer)
+                    Comm &comm, Thermo &thermo, Timer &timer, const int restart_)
 {
   int i, n;
 
@@ -83,8 +104,32 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   dtforce = dtforce / mass;
 
     int next_sort = sort_every>0?sort_every:ntimes+1;
+    int nStart = 0;
 
-    for(n = 0; n < ntimes; n++) {
+#ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
+    Kokkos::Experimental::StdFileSpace sfs;
+    auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
+    auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
+    auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
+    nStart = restart_;
+
+// Load from restart ...
+    if (nStart > 0) {
+         if (comm.nprocs > 1)
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10));
+         else
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10), comm.me);
+         // need to resize the views to match the checkpoint files ... 
+         Kokkos::Experimental::StdFileSpace::restore_all_views();
+    }
+#endif
+
+    for(n = nStart; n < ntimes; n++) {
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+    #ifdef KR_ENABLE_TRACING
+      auto iter_time = KokkosResilience::Util::begin_trace< KokkosResilience::Util::IterTimingTrace< std::string > >( *resilience_context, "step", n );
+    #endif
+#endif
 
       Kokkos::fence();
 
@@ -94,7 +139,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       xold = atom.xold;
       nlocal = atom.nlocal;
 
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      KokkosResilience::checkpoint( *resilience_context, "initial", n, [self = *this]() mutable {
+        self.initialIntegrate();
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+#else
       initialIntegrate();
+#endif
 
       timer.stamp();
 
@@ -179,8 +230,24 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      KokkosResilience::checkpoint( *resilience_context, "final", n, [self = *this]() mutable {
+        self.finalIntegrate();
+      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+#else
       finalIntegrate();
+#endif
 
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
+#ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
+      if ( n % 10 == 0 ) {
+         Kokkos::fence();
+         if (comm.nprocs > 1) 
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n);
+         else
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n, comm.me);
+         CHECKPOINT_FILESPACE::checkpoint_views();
+      }
+#endif
     }
 }

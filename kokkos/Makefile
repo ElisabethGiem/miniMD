@@ -4,20 +4,36 @@ MPI_PATH =
 HAVE_MPI = yes
 
 #Set the path to Kokkos
-KOKKOS_PATH = /home/crtrott/kokkos
+#KOKKOS_PATH = /home/crtrott/kokkos
 #Set the Devices to compile for
 KOKKOS_DEVICES=OpenMP
 #Set the Architecture to compiler for
-KOKKOS_ARCH=SNB
+KOKKOS_ARCH=
 #Set third party library usage
 KOKKOS_USE_TPL=
+KOKKOS_OPTIONS=enable_hdf5_parallel
 
-CXXFLAGS = -O3 -g 
-LINKFLAGS = 
+CXXFLAGS = -O3 -g
+##LINKFLAGS = -lm -L./ --std=c++11
+LINKFLAGS = -L./ --std=c++11
 LIB =
 
+FILE_EXTENSION=base
+
+ifeq ($(KOKKOS_OPTIONS), enable_stdfile)
+   FILE_EXTENSION=stdfile
+endif
+ifeq ($(KOKKOS_OPTIONS), enable_hdf5)
+   FILE_EXTENSION=hdf5ser
+endif
+ifeq ($(KOKKOS_OPTIONS), enable_hdf5_parallel)
+   FILE_EXTENSION=hdf5par
+endif
+
 ifeq ($(HAVE_MPI), yes)
+##CXX = $(KOKKOS_PATH)/bin/nvcc_wrapper
 CXX = mpicxx
+LIB += -lmpi
 else
 CXX = g++
 override CXXFLAGS += -I./MPI-Stubs
@@ -25,7 +41,7 @@ LIB += MPI-Stubs/libmpi_stubs.a
 endif
 
 LINK = ${CXX}
-EXE = miniMD
+EXE = miniMD.${FILE_EXTENSION}
 
 #CXXFLAGS += -DTEST_LAMBDA_BYCOPY
 #CXXFLAGS += -DTEST_LAMBDA_BYPTR
@@ -75,6 +91,7 @@ default: all
 
 MAKEFILE_PATH := $(subst Makefile,,$(abspath $(lastword $(MAKEFILE_LIST))))
 include $(KOKKOS_PATH)/Makefile.kokkos
+include $(KOKKOS_RESILIENCE_PATH)/Makefile.resilience
 
 SRC = $(wildcard $(MAKEFILE_PATH)*.cpp)
 HEADERS = $(wildcard $(MAKEFILE_PATH)*.hpp)
