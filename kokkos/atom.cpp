@@ -36,9 +36,14 @@
 #include "atom.h"
 #include "neighbor.h"
 
-#define DELTA 20000
+int Atom::atom_block = 10000;
 
-Atom::Atom(int ntypes_)
+void Atom::set_atom_block_size(int size_)
+{
+   atom_block = size_;
+}
+
+Atom::Atom(int ntypes_) : x("atom",0), v("velocity",0), f("force",0) 
 {
   natoms = 0;
   nlocal = 0;
@@ -61,7 +66,9 @@ Atom::~Atom()
 
 void Atom::growarray()
 {
-  nmax += DELTA;
+//  printf("grow array: %ld\n", nmax);
+//  fflush(stdout);
+  nmax += atom_block;
   Kokkos::resize(x,nmax);
   Kokkos::resize(v,nmax);
   Kokkos::resize(f,nmax);
