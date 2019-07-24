@@ -41,8 +41,12 @@
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
    #include <mpi.h>
+   bool serial_io = true;
    #ifdef KOKKOS_ENABLE_HDF5
       #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+      #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
+         serial_io = false;
+      #endif
    #else
       #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
    #endif
@@ -122,7 +126,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     if (nStart > 0) {
          std::string cp_path = root_path;
          cp_path+=(std::string)"data";
-         if (comm.nprocs > 1 && !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value)
+         if ( comm.nprocs > 1 &&
+              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !serial_io )
             Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
                    set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), (int)((nStart / 10) * 10));
          else
@@ -253,7 +259,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          std::string cp_path = root_path;
          cp_path+=(std::string)"data";
          Kokkos::fence();
-         if (comm.nprocs > 1 && !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value) 
+         if ( comm.nprocs > 1 && 
+              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !serial_io ) 
             Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
                       set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), n);
          else
