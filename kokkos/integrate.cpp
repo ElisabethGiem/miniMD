@@ -41,13 +41,15 @@
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
    #include <mpi.h>
-   bool serial_io = true;
    #ifdef KOKKOS_ENABLE_HDF5
       #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
       #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
-         serial_io = false;
+         bool serial_io = false;
+      #else
+         bool serial_io = true;
       #endif
    #else
+      bool serial_io = true;
       #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
    #endif
 #endif
