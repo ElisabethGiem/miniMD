@@ -93,10 +93,15 @@ int main(int argc, char** argv)
   int ntypes = 8;
   int team_neigh = 0;
   int restart = 0;
+  std::string root_path = "./";
 
   for(int i = 0; i < argc; i++) {
     if((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input_file") == 0)) {
       input_file = argv[++i];
+      continue;
+    }
+    else if((strcmp(argv[i], "-cp") == 0) || (strcmp(argv[i], "--checkpoint_path") == 0)) {
+      root_path = argv[++i];
       continue;
     }
   }
@@ -573,7 +578,7 @@ int main(int argc, char** argv)
   }
 
   timer.barrier_start(TIME_TOTAL);
-  integrate.run(atom, force, neighbor, comm, thermo, timer, restart);
+  integrate.run(atom, force, neighbor, comm, thermo, timer, restart, root_path);
   timer.barrier_stop(TIME_TOTAL);
 
   int natoms;

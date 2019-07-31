@@ -35,18 +35,27 @@
 #include "math.h"
 #include <cstdlib>
 
-#ifdef KOKKOS_ENABLE_HDF5
-   #define CHECKPOINT_FILESPACE KokkosResilience::HDF5Space
-#else
-   #define CHECKPOINT_FILESPACE KokkosResilience::StdFileSpace
-#endif
-
 #ifdef MINIMD_RESILIENCE
    #include <resilience/Resilience.hpp>
 #endif
 
+#ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
+   #include <mpi.h>
+   #ifdef KOKKOS_ENABLE_HDF5
+      #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+      #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
+         bool serial_io = false;
+      #else
+         bool serial_io = true;
+      #endif
+   #else
+      bool serial_io = true;
+      #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+   #endif
+#endif
+
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
+   #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
 #else
    #ifdef KOKKOS_ENABLE_CUDA
       #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
@@ -91,7 +100,8 @@ void Integrate::operator() (TagFinalIntegrate, const int& i) const {
 }
 
 void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
-                    Comm &comm, Thermo &thermo, Timer &timer, const int restart_)
+                    Comm &comm, Thermo &thermo, Timer &timer, 
+                    const int restart_, std::string root_path)
 {
   int i, n;
 
@@ -107,22 +117,27 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     int nStart = 0;
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
-    KokkosResilience::StdFileSpace sfs;
+    CHECKPOINT_FILESPACE sfs;
+    if (comm.me == 0) printf("manual checkpoint using cp mirror: %s \n", sfs.name());
     auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
     auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
     auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
     nStart = restart_;
 
-    // Load from restart ...
+// Load from restart ...
     if (nStart > 0) {
-        if (comm.nprocs > 1)
-            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false,
-                    "./data", (int) ((nStart / 10) * 10));
-        else
-            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false,
-                    "./data", (int) ((nStart / 10) * 10), comm.me);
-        // need to resize the views to match the checkpoint files ...
-        KokkosResilience::StdFileSpace::restore_all_views();
+         std::string cp_path = root_path;
+         cp_path+=(std::string)"data";
+         if ( comm.nprocs > 1 &&
+              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !serial_io )
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+                   set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), (int)((nStart / 10) * 10));
+         else
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+                   set_checkpoint_directory( true , cp_path.c_str(), (int)((nStart / 10) * 10), comm.me);
+         // need to resize the views to match the checkpoint files ... 
+         CHECKPOINT_FILESPACE::restore_all_views();
     }
 #endif
 
@@ -243,12 +258,22 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
       if ( n % 10 == 0 ) {
+         std::string cp_path = root_path;
+         cp_path+=(std::string)"data";
          Kokkos::fence();
-         if (comm.nprocs > 1)
-            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n);
+         if ( comm.nprocs > 1 && 
+              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !serial_io ) 
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+                      set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), n);
          else
-            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n, comm.me);
+            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+                      set_checkpoint_directory( true , cp_path.c_str(), n, comm.me);
          CHECKPOINT_FILESPACE::checkpoint_views();
+         MPI_Barrier( MPI_COMM_WORLD );
+         //if (comm.me == 0) printf("checkpoint complete: %d \n", n); 
+      } else {
+         //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
 #endif
     }
