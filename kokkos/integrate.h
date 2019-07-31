@@ -61,5 +61,5 @@ class Integrate
     void finalIntegrate();
     KOKKOS_INLINE_FUNCTION
     void operator() (TagFinalIntegrate, const int& i) const;
-    void run(Atom &, Force*, Neighbor &, Comm &, Thermo &, Timer &, const int);
+    void run(Atom &, Force*, Neighbor &, Comm &, Thermo &, Timer &, const int, std::string);
 };
