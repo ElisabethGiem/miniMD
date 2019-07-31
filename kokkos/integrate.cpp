@@ -55,7 +55,7 @@
 #endif
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-   #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
+   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
 #else
    #ifdef KOKKOS_ENABLE_CUDA
       #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
