@@ -42,7 +42,7 @@
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
    #include <mpi.h>
    #ifdef KOKKOS_ENABLE_HDF5
-      #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+      #define CHECKPOINT_FILESPACE KokkosResilience::HDF5Space
       #ifdef KOKKOS_ENABLE_HDF5_PARALLEL
          bool serial_io = false;
       #else
@@ -50,7 +50,7 @@
       #endif
    #else
       bool serial_io = true;
-      #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+      #define CHECKPOINT_FILESPACE KokkosResilience::StdFileSpace
    #endif
 #endif
 
@@ -129,12 +129,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          std::string cp_path = root_path;
          cp_path+=(std::string)"data";
          if ( comm.nprocs > 1 &&
-              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !std::is_same<CHECKPOINT_FILESPACE, KokkosResilience::StdFileSpace>::value &&
               !serial_io )
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::
                    set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), (int)((nStart / 10) * 10));
          else
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::
                    set_checkpoint_directory( true , cp_path.c_str(), (int)((nStart / 10) * 10), comm.me);
          // need to resize the views to match the checkpoint files ... 
          CHECKPOINT_FILESPACE::restore_all_views();
@@ -262,12 +262,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          cp_path+=(std::string)"data";
          Kokkos::fence();
          if ( comm.nprocs > 1 && 
-              !std::is_same<CHECKPOINT_FILESPACE, Kokkos::Experimental::StdFileSpace>::value &&
+              !std::is_same<CHECKPOINT_FILESPACE, KokkosResilience::StdFileSpace>::value &&
               !serial_io ) 
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::
                       set_checkpoint_directory(comm.me == 0 ? true : false, cp_path.c_str(), n);
          else
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::
                       set_checkpoint_directory( true , cp_path.c_str(), n, comm.me);
          CHECKPOINT_FILESPACE::checkpoint_views();
          MPI_Barrier( MPI_COMM_WORLD );
