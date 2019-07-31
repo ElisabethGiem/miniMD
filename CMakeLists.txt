@@ -24,7 +24,7 @@ target_compile_definitions(minimd PRIVATE PREC_TIMER)
 
 # Dependencies
 if (MINIMD_USE_MPISTUB)
-   find_library( mpi_stub_ NAMES libmpi_stubs.a libmpi_stubs mpi_stubs HINTS ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs ) 
+   find_library( mpi_stub_ NAMES libmpi_stubs.a libmpi_stubs mpi_stubs HINTS ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs )
    #add_library(mpi_stubs)
    #target_link_libraries(minimd PRIVATE mpi_stubs)
    target_link_libraries(minimd PRIVATE ${mpi_stub_})
@@ -54,9 +54,7 @@ if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT OR MINIMD_RESILIENT_E
   endif()
 endif()
 
-TARGET_LINK_KOKKOS(minimd PRIVATE)
-
-target_link_libraries(minimd PRIVATE "-L${resilience_LINK_DIRECTORIES}")
+target_link_kokkos(minimd PRIVATE)
 
 # VeloC config
 add_custom_command(TARGET minimd PRE_BUILD
@@ -72,10 +70,4 @@ add_custom_command(TARGET minimd PRE_BUILD
 
 add_subdirectory(kokkos)
 
-
-##get_cmake_property(_variableNames VARIABLES)
-##list (SORT _variableNames)
-##foreach (_variableName ${_variableNames})
-##    message(STATUS "${_variableName}=${${_variableName}}")
-##endforeach()
 
