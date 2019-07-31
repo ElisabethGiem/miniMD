@@ -36,17 +36,17 @@
 #include <cstdlib>
 
 #ifdef KOKKOS_ENABLE_HDF5
-   #define CHECKPOINT_FILESPACE Kokkos::Experimental::HDF5Space
+   #define CHECKPOINT_FILESPACE KokkosResilience::HDF5Space
 #else
-   #define CHECKPOINT_FILESPACE Kokkos::Experimental::StdFileSpace
+   #define CHECKPOINT_FILESPACE KokkosResilience::StdFileSpace
 #endif
 
 #ifdef MINIMD_RESILIENCE
-   #include <Kokkos_Resilience.hpp>
+   #include <resilience/Resilience.hpp>
 #endif
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-   #define DEVICE_EXECUTION_SPACE Kokkos::ResCuda
+   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
 #else
    #ifdef KOKKOS_ENABLE_CUDA
       #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
@@ -107,20 +107,22 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     int nStart = 0;
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
-    Kokkos::Experimental::StdFileSpace sfs;
+    KokkosResilience::StdFileSpace sfs;
     auto x_cp = Kokkos::create_chkpt_mirror( sfs, atom.x );
     auto v_cp = Kokkos::create_chkpt_mirror( sfs, atom.v );
     auto f_cp = Kokkos::create_chkpt_mirror( sfs, atom.f );
     nStart = restart_;
 
-// Load from restart ...
+    // Load from restart ...
     if (nStart > 0) {
-         if (comm.nprocs > 1)
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10));
-         else
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", (int)((nStart / 10) * 10), comm.me);
-         // need to resize the views to match the checkpoint files ... 
-         Kokkos::Experimental::StdFileSpace::restore_all_views();
+        if (comm.nprocs > 1)
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false,
+                    "./data", (int) ((nStart / 10) * 10));
+        else
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false,
+                    "./data", (int) ((nStart / 10) * 10), comm.me);
+        // need to resize the views to match the checkpoint files ...
+        KokkosResilience::StdFileSpace::restore_all_views();
     }
 #endif
 
@@ -242,10 +244,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
       if ( n % 10 == 0 ) {
          Kokkos::fence();
-         if (comm.nprocs > 1) 
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n);
+         if (comm.nprocs > 1)
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n);
          else
-            Kokkos::Experimental::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n, comm.me);
+            KokkosResilience::DirectoryManager<CHECKPOINT_FILESPACE>::set_checkpoint_directory(comm.me == 0 ? true : false, "./data", n, comm.me);
          CHECKPOINT_FILESPACE::checkpoint_views();
       }
 #endif
