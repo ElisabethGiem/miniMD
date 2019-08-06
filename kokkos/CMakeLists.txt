@@ -1,14 +1,14 @@
 target_sources(minimd PRIVATE
-               ${PROJECT_SOURCE_DIR}/kokkos/atom.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/comm.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/force_eam.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/force_lj.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/input.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/integrate.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/ljs.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/neighbor.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/output.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/setup.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/thermo.cpp
-               ${PROJECT_SOURCE_DIR}/kokkos/timer.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/atom.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/comm.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/force_eam.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/force_lj.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/input.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/integrate.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/ljs.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/neighbor.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/output.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/setup.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/thermo.cpp
+               ${CMAKE_CURRENT_LIST_DIR}/timer.cpp
                )
