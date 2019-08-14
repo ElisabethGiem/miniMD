@@ -53,8 +53,8 @@ struct In {
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
    #include <resilience/Resilience.hpp>
    #include <memory>
-   #ifdef KOKKOS_ENABLE_VELOC
-      extern std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
+   #ifdef KR_ENABLE_VELOC
+      extern std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCMemoryBackend > > resilience_context;
    #else
       // TODO -- need a non-veloc backend before this will compile...
       extern std::unique_ptr< KokkosResilience::Context< > > resilience_context;
