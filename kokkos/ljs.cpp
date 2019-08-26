@@ -57,8 +57,8 @@ void output(In &, Atom &, Force*, Neighbor &, Comm &,
 int read_lammps_data(Atom &atom, Comm &comm, Neighbor &neighbor, Integrate &integrate, Thermo &thermo, char* file, int units);
 
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-   #ifdef KOKKOS_ENABLE_VELOC
-      std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > > resilience_context;
+   #ifdef KR_ENABLE_VELOC
+      std::unique_ptr< KokkosResilience::Context< KokkosResilience::VeloCMemoryBackend > > resilience_context;
    #else
       std::unique_ptr< KokkosResilience::Context< > > resilience_context;
    #endif
@@ -109,15 +109,15 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &me);
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  
+
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-   #ifdef KOKKOS_ENABLE_VELOC
-      resilience_context = std::make_unique< KokkosResilience::Context< KokkosResilience::VeloCCheckpointBackend > >(MPI_COMM_WORLD, "minimd.cfg");
+   #ifdef KR_ENABLE_VELOC
+      resilience_context = std::make_unique< KokkosResilience::Context< KokkosResilience::VeloCMemoryBackend > >(MPI_COMM_WORLD, "minimd.cfg");
    #else
       resilience_context = std::make_unique< KokkosResilience::Context< > >();
    #endif
 #endif
-  
+
   int error = 0;
 
   if(input_file == NULL)
@@ -563,7 +563,7 @@ int main(int argc, char** argv)
 
   force->evflag = 1;
   neighbor.build(atom);
-  
+
   force->compute(atom, neighbor, comm, me);
 
   if(neighbor.halfneigh && neighbor.ghost_newton)
