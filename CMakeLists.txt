@@ -54,7 +54,7 @@ if(MINIMD_AUTOMATIC_CHECKPOINT OR MINIMD_MANUAL_CHECKPOINT OR MINIMD_RESILIENT_E
   endif()
 endif()
 
-target_link_kokkos(minimd PRIVATE)
+target_link_libraries(minimd PRIVATE Kokkos::kokkos)
 
 # VeloC config
 add_custom_command(TARGET minimd PRE_BUILD
