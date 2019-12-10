@@ -1,0 +1,12 @@
+{
+  "backend": "veloc",
+  "backends": {
+    "veloc": {
+      "config": "minimd.cfg"
+    }
+  },
+  "filter": {
+    "type": "time",
+    "interval": 10
+  }
+}

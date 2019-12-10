@@ -59,6 +59,8 @@ target_link_libraries(minimd PRIVATE Kokkos::kokkos)
 # VeloC config
 add_custom_command(TARGET minimd PRE_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/minimd.cfg ${CMAKE_CURRENT_BINARY_DIR}/minimd.cfg)
+add_custom_command(TARGET minimd PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/minimd.json ${CMAKE_CURRENT_BINARY_DIR}/minimd.json)
 
 # Other inputs
 

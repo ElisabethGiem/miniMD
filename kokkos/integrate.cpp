@@ -274,7 +274,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       }
 #endif
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-      }, KokkosResilience::filter::nth_iteration_filter< 10 >{} );
+      } );
 #endif
     }
 }
