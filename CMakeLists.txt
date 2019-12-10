@@ -72,4 +72,9 @@ add_custom_command(TARGET minimd PRE_BUILD
 
 add_subdirectory(kokkos)
 
+# Install rules
+include(GNUInstallDirs)
+
+install(TARGETS minimd)
+
 
