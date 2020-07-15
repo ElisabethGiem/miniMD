@@ -55,10 +55,10 @@ class Integrate
     Integrate();
     ~Integrate();
     void setup();
-    void initialIntegrate();
+    void initialIntegrate(int step);
     KOKKOS_INLINE_FUNCTION
     void operator() (TagInitialIntegrate, const int& i) const;
-    void finalIntegrate();
+    void finalIntegrate(int step);
     KOKKOS_INLINE_FUNCTION
     void operator() (TagFinalIntegrate, const int& i) const;
     void run(Atom &, Force*, Neighbor &, Comm &, Thermo &, Timer &, const int, std::string);
