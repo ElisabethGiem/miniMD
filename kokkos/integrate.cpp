@@ -168,10 +168,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       xold = atom.xold;
       nlocal = atom.nlocal;
 
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-      KokkosResilience::checkpoint( *resilience_context, "iter", n, [&, KR_CHECKPOINT_THIS, KR_CHECKPOINT( nlocal )]() mutable {
-#endif
-      self->initialIntegrate(n);
+      initialIntegrate(n);
 
       timer.stamp();
 
@@ -278,9 +275,6 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       } else {
          //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
-#endif
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-      } );
 #endif
     }
 }
