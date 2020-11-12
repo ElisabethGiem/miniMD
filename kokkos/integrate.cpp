@@ -276,5 +276,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
 #endif
+
+      if ( ( fail_iter > 0 ) && ( n == fail_iter ) && is_fail_node ) {
+        printf("Intentionally killing rank on iteration %d.\n", n );
+        MPI_Abort( MPI_COMM_WORLD, 400 );
+      }
     }
 }

@@ -52,6 +52,9 @@ class Integrate
 
     MMD_int sort_every;
 
+    int fail_iter;
+    bool is_fail_node;
+
     Integrate();
     ~Integrate();
     void setup();
