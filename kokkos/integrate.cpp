@@ -72,9 +72,15 @@ void Integrate::setup()
   dtforce = 0.5 * dt;
 }
 
-void Integrate::initialIntegrate()
+void Integrate::initialIntegrate(int step)
 {
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+  KokkosResilience::checkpoint( *resilience_context, "initial_integrate", step, [this, KR_CHECKPOINT_THIS]() mutable {
+#endif
   Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagInitialIntegrate>(0,nlocal), *this);
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+  } );
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -87,9 +93,15 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
   x(i,2) += dt * v(i,2);
 }
 
-void Integrate::finalIntegrate()
+void Integrate::finalIntegrate(int step)
 {
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+  KokkosResilience::checkpoint( *resilience_context, "final_integrate", step, [this, KR_CHECKPOINT_THIS]() mutable {
+#endif
   Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagFinalIntegrate>(0,nlocal), *this);
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+  } );
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -142,18 +154,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #endif
 
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-    nStart = KokkosResilience::latest_version( *resilience_context, "iter" );
+    nStart = KokkosResilience::latest_version( *resilience_context, "initial_integrate" );
     if ( nStart < 0 )
         nStart = 0;
 #endif
 
-    for(n = nStart; n < ntimes; n++) {
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-    #ifdef KR_ENABLE_TRACING
-      auto iter_time = KokkosResilience::Util::begin_trace< KokkosResilience::Util::IterTimingTrace< std::string > >( *resilience_context, "step", n );
-    #endif
-#endif
-
+    for(int n = nStart; n < ntimes; n++) {
       Kokkos::fence();
 
       x = atom.x;
@@ -162,10 +168,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       xold = atom.xold;
       nlocal = atom.nlocal;
 
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-      KokkosResilience::checkpoint( *resilience_context, "iter", n, [&, KR_CHECKPOINT_THIS, KR_CHECKPOINT( nlocal )]() mutable {
-#endif
-      initialIntegrate();
+      initialIntegrate(n);
 
       timer.stamp();
 
@@ -250,7 +253,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
-      finalIntegrate();
+      finalIntegrate(n);
 
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
@@ -272,9 +275,6 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       } else {
          //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
-#endif
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-      } );
 #endif
     }
 }
