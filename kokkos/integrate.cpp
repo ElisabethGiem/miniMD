@@ -153,6 +153,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
     }
 #endif
 
+    resilience_context->register_alias( "velocity", "atom::v_copy" );
+    resilience_context->register_alias( "atom", "atom::x_copy" );
+
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
     nStart = KokkosResilience::latest_version( *resilience_context, "initial_integrate" );
     if ( nStart < 0 )
