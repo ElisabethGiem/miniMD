@@ -90,6 +90,8 @@ int main(int argc, char** argv)
   int team_neigh = 0;
   int restart = 0;
   std::string root_path = "./";
+  int fail_iter = 0;  // WHat iteration to fail at (0 to disable)
+  int fail_node = 0;
 
   for(int i = 0; i < argc; i++) {
     if((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input_file") == 0)) {
@@ -275,6 +277,22 @@ int main(int argc, char** argv)
       continue;
     }
 
+    if((strcmp(argv[i], "--fail") == 0)) {
+      fail_iter = atoi(argv[++i]);
+      continue;
+    }
+
+    if((strcmp(argv[i], "--fail_node") == 0)) {
+      fail_node = atoi(argv[++i]);
+      if (fail_node >= nprocs)
+      {
+        fprintf(stderr, "ERROR: fail node must be less than the total number of MPI ranks\n");
+        MPI_Finalize();
+        exit(0);
+      }
+      continue;
+    }
+
     if((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       printf("\n-----------------------------------------------------------------------------------------------------------\n");
       printf("-------------" VARIANT_STRING "--------------------\n");
@@ -322,6 +340,8 @@ int main(int argc, char** argv)
       printf("\t--sort <n>:                   resort atoms (simple bins) every <n> steps (default: use reneigh frequency; never=0)");
       printf("\t-o / --yaml_output <int>:     level of yaml output (default 1)\n");
       printf("\t--yaml_screen:                write yaml output also to screen\n");
+      printf("\t--fail <n>:                   fail on the given iteration (< 1 disables)\n");
+      printf("\t--fail_node <n>:              if fail is enabled, fail on the given node\n");
       printf("\t-h / --help:                  display this help message\n\n");
       printf("---------------------------------------------------------\n\n");
 
@@ -357,6 +377,9 @@ int main(int argc, char** argv)
   Timer timer;
 
   Force* force;
+
+  integrate.fail_iter = fail_iter;
+  integrate.is_fail_node = fail_node == me;
 
   if(in.forcetype == FORCEEAM) {
     force = (Force*) new ForceEAM(ntypes);
