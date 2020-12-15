@@ -74,13 +74,7 @@ void Integrate::setup()
 
 void Integrate::initialIntegrate(int step)
 {
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-  KokkosResilience::checkpoint( *resilience_context, "initial_integrate", step, [this, KR_CHECKPOINT_THIS]() mutable {
-#endif
   Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagInitialIntegrate>(0,nlocal), *this);
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-  } );
-#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -95,13 +89,7 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate(int step)
 {
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-  KokkosResilience::checkpoint( *resilience_context, "final_integrate", step, [this, KR_CHECKPOINT_THIS]() mutable {
-#endif
   Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagFinalIntegrate>(0,nlocal), *this);
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
-  } );
-#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -164,6 +152,17 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
     for(int n = nStart; n < ntimes; n++) {
       Kokkos::fence();
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      int nlocal = atom.nlocal;
+      int nmax = atom.nmax;
+      KokkosResilience::checkpoint( *resilience_context, "initial_integrate", n, [&, KR_CHECKPOINT( nlocal ), KR_CHECKPOINT( nmax ),
+                                                                                  _tmp_atom=atom,
+                                                                                  _tmp_neigh=neighbor,
+                                                                                  _tmp_comm=comm,
+                                                                                  KR_CHECKPOINT_THIS]() mutable {
+#endif
+      atom.nlocal = nlocal;
+      atom.nmax = nmax;
 
       x = atom.x;
       v = atom.v;
@@ -284,5 +283,8 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
         printf("Intentionally killing rank on iteration %d.\n", n );
         MPI_Abort( MPI_COMM_WORLD, 400 );
       }
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+      } );
+#endif
     }
 }
