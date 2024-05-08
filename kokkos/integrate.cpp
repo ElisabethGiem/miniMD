@@ -55,13 +55,13 @@
 #endif
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
-#else
-   #ifdef KOKKOS_ENABLE_CUDA
-      #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
-   #else
+//   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
+//#else
+//   #ifdef KOKKOS_ENABLE_CUDA
+//      #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
+//   #else
       #define DEVICE_EXECUTION_SPACE Kokkos::OpenMP
-   #endif
+//   #endif
 #endif
 
 Integrate::Integrate() {sort_every=20;}
@@ -140,11 +140,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          CHECKPOINT_FILESPACE::restore_all_views();
     }
 #endif
-
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
     resilience_context->register_alias( "velocity", "atom::v_copy" );
     resilience_context->register_alias( "atom", "atom::x_copy" );
 
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+//#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
     nStart = KokkosResilience::latest_version( *resilience_context, "initial_integrate" );
     if ( nStart < 0 )
         nStart = 0;
@@ -278,12 +278,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
 #endif
-
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
       if ( ( fail_iter > 0 ) && ( n == fail_iter ) && is_fail_node ) {
         printf("Intentionally killing rank on iteration %d.\n", n );
         MPI_Abort( MPI_COMM_WORLD, 400 );
       }
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+//#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
       } );
 #endif
     }
