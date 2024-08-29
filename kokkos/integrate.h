@@ -47,6 +47,7 @@ class Integrate
     MMD_float dtforce;
     MMD_int ntimes;
     MMD_int nlocal, nmax;
+    //TODO res
     x_view_type x, v, f, xold;
     MMD_float mass;
 

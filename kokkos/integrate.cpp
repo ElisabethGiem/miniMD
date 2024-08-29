@@ -34,9 +34,14 @@
 #include "integrate.h"
 #include "math.h"
 #include <cstdlib>
+#include <iostream>
+#include <chrono>
 
-#ifdef MINIMD_RESILIENCE
-   #include <resilience/Resilience.hpp>
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+#include <resilience/Resilience.hpp>
+#include <resilience/openMP/ResHostSpace.hpp>
+#include <resilience/openMP/ResOpenMP.hpp>
+#include <resilience/openMP/OpenMPResSubscriber.hpp>
 #endif
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
@@ -54,16 +59,6 @@
    #endif
 #endif
 
-#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-   #define DEVICE_EXECUTION_SPACE KokkosResilience::ResCuda
-#else
-   #ifdef KOKKOS_ENABLE_CUDA
-      #define DEVICE_EXECUTION_SPACE Kokkos::Cuda
-   #else
-      #define DEVICE_EXECUTION_SPACE Kokkos::OpenMP
-   #endif
-#endif
-
 Integrate::Integrate() {sort_every=20;}
 Integrate::~Integrate() {}
 
@@ -74,13 +69,17 @@ void Integrate::setup()
 
 void Integrate::initialIntegrate(int step)
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagInitialIntegrate>(0,nlocal), *this);
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagInitialIntegrate>(0,nlocal), *this);
+#else      
+  Kokkos::parallel_for(Kokkos::RangePolicy<TagInitialIntegrate>(0,nlocal), *this);
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
 void Integrate::operator() (TagInitialIntegrate, const int& i) const {
   v(i,0) += dtforce * f(i,0);
-  v(i,1) += dtforce * f(i,1);
+    v(i,1) += dtforce * f(i,1);
   v(i,2) += dtforce * f(i,2);
   x(i,0) += dt * v(i,0);
   x(i,1) += dt * v(i,1);
@@ -89,7 +88,7 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate(int step)
 {
-  Kokkos::parallel_for(Kokkos::RangePolicy<DEVICE_EXECUTION_SPACE, TagFinalIntegrate>(0,nlocal), *this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<TagFinalIntegrate>(0,nlocal), *this);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -104,6 +103,9 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
                     const int restart_, std::string root_path)
 {
   int i, n;
+  
+  //TODO RESILIENT TEST COUNTER: TO BE REOMVED
+  int integrate_counter=0;
 
   comm.timer = &timer;
   timer.array[TIME_TEST] = 0.0;
@@ -140,11 +142,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          CHECKPOINT_FILESPACE::restore_all_views();
     }
 #endif
-
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
     resilience_context->register_alias( "velocity", "atom::v_copy" );
     resilience_context->register_alias( "atom", "atom::x_copy" );
 
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+//#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
     nStart = KokkosResilience::latest_version( *resilience_context, "initial_integrate" );
     if ( nStart < 0 )
         nStart = 0;
@@ -152,6 +154,8 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
     for(int n = nStart; n < ntimes; n++) {
       Kokkos::fence();
+
+//TODO: ignore for now
 #ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
       int nlocal = atom.nlocal;
       int nmax = atom.nmax;
@@ -160,22 +164,30 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
                                                                                   _tmp_neigh=neighbor,
                                                                                   _tmp_comm=comm,
                                                                                   KR_CHECKPOINT_THIS]() mutable {
-#endif
+//#endif
       atom.nlocal = nlocal;
       atom.nmax = nmax;
-
+#endif
       x = atom.x;
       v = atom.v;
       f = atom.f;
       xold = atom.xold;
       nlocal = atom.nlocal;
 
+//TODO: res + timer      
+      
+      const auto start{std::chrono::steady_clock::now()};
       initialIntegrate(n);
+      integrate_counter++;
+      const auto stop{std::chrono::steady_clock::now()};
+      const auto time = stop-start;
+      std::cout << "\n\nInitial integrate loop " << integrate_counter << " took " << time.count() << " nanoseconds.\n\n";
 
       timer.stamp();
 
       if((n + 1) % neighbor.every) {
 
+	//TODO: res + timer      
         comm.communicate(atom);
         timer.stamp(TIME_COMM);
 
@@ -218,11 +230,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
           }
 
           timer.stamp_extra_start();
-          comm.exchange(atom);
+          //TODO: res + timer
+	  comm.exchange(atom);
           if(n+1>=next_sort) {
             atom.sort(neighbor);
             next_sort +=  sort_every;
           }
+	  //TODO: res + timer
           comm.borders(atom);
           timer.stamp_extra_stop(TIME_TEST);
           timer.stamp(TIME_COMM);
@@ -230,7 +244,8 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
         Kokkos::fence();
 
 	Kokkos::Profiling::pushRegion("neighbor::build");
-        neighbor.build(atom);
+        //TODO: res + timer
+	neighbor.build(atom);
 	Kokkos::Profiling::popRegion();
 
         timer.stamp(TIME_NEIGH);
@@ -238,13 +253,15 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::Profiling::pushRegion("force");
       force->evflag = (n + 1) % thermo.nstat == 0;
+      //TODO: res + timer
       force->compute(atom, neighbor, comm, comm.me);
       Kokkos::Profiling::popRegion();
 
       timer.stamp(TIME_FORCE);
 
       if(neighbor.halfneigh && neighbor.ghost_newton) {
-        comm.reverse_communicate(atom);
+        //TODO: res + timer
+	comm.reverse_communicate(atom);
 
         timer.stamp(TIME_COMM);
       }
@@ -255,9 +272,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
+      //TODO: res + timer
       finalIntegrate(n);
 
+      //TODO: res + timer
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
+//TODO: ignore here to end of checkpoint for now
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
       if ( n % 10 == 0 ) {
          std::string cp_path = root_path;
@@ -278,12 +298,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
          //if (comm.me == 0) printf("compute only iteration: %d \n", n); 
       }
 #endif
-
+#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
       if ( ( fail_iter > 0 ) && ( n == fail_iter ) && is_fail_node ) {
         printf("Intentionally killing rank on iteration %d.\n", n );
         MPI_Abort( MPI_COMM_WORLD, 400 );
       }
-#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
+//#ifdef KOKKOS_ENABLE_AUTOMATIC_CHECKPOINT
       } );
 #endif
     }

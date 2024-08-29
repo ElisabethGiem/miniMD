@@ -65,9 +65,15 @@ class Atom
     int nlocal, nghost;
     int nmax;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    res_x_view_type x;
+    res_x_view_type v;
+    res_x_view_type f;
+#else
+    x_view_type f;
     x_view_type x;
     x_view_type v;
-    x_view_type f;
+#endif
     x_host_view_type h_x;
     x_host_view_type h_v;
     x_host_view_type h_f;
