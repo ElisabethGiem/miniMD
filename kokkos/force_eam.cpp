@@ -66,7 +66,7 @@ ForceEAM::ForceEAM(int ntypes_)
 
   style = FORCEEAM;
 
-  nthreads = Kokkos::HostSpace::execution_space::concurrency();
+  nthreads = Kokkos::DefaultHostExecutionSpace().concurrency();
 }
 
 /* ----------------------------------------------------------------------
@@ -194,7 +194,7 @@ void ForceEAM::operator() (TagHalfNeighInitial , const int& i ) const {
 
       if(j < nlocal) {
         #ifdef KOKKOS_ENABLE_SERIAL
-        if(Kokkos::Impl::is_same<Kokkos::DefaultExecutionSpace,Kokkos::Serial>::value)
+        if(std::is_same_v<Kokkos::DefaultExecutionSpace,Kokkos::Serial>)
           rho(j) += d_rho;
         else
         #endif
@@ -204,7 +204,7 @@ void ForceEAM::operator() (TagHalfNeighInitial , const int& i ) const {
   }
 
   #ifdef KOKKOS_ENABLE_SERIAL
-  if(Kokkos::Impl::is_same<Kokkos::DefaultExecutionSpace,Kokkos::Serial>::value)
+  if(std::is_same_v<Kokkos::DefaultExecutionSpace,Kokkos::Serial>)
     rho(i) += rhoi;
   else
   #endif
@@ -311,7 +311,7 @@ void ForceEAM::operator() (TagHalfNeighFinal<EVFLAG> , const int& i, eng_virial_
 
       if(j < nlocal) {
         #ifdef KOKKOS_ENABLE_SERIAL
-        if(Kokkos::Impl::is_same<Kokkos::DefaultExecutionSpace,Kokkos::Serial>::value) {
+        if(std::is_same_v<Kokkos::DefaultExecutionSpace,Kokkos::Serial>) {
           f(j,0) -= delx * fpair;
           f(j,1) -= dely * fpair;
           f(j,2) -= delz * fpair;
@@ -334,7 +334,7 @@ void ForceEAM::operator() (TagHalfNeighFinal<EVFLAG> , const int& i, eng_virial_
   }
 
   #ifdef KOKKOS_ENABLE_SERIAL
-  if(Kokkos::Impl::is_same<Kokkos::DefaultExecutionSpace,Kokkos::Serial>::value) {
+  if(std::is_same_v<Kokkos::DefaultExecutionSpace,Kokkos::Serial>) {
     f(i,0) += fx;
     f(i,1) += fy;
     f(i,2) += fz;
