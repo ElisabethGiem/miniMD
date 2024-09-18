@@ -108,7 +108,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   //TODO RESILIENT TEST COUNTER: TO BE REOMVED
   int integrate_counter=0;
 
-  
+  /*
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
   std::ofstream res_minimd_posfile;
   res_minimd_posfile.open("/home/eagiem/resilient-miniMD/miniMD/test/res_minimd_posfile.txt");
@@ -116,7 +116,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   std::ofstream minimd_posfile;
   minimd_posfile.open("/scratch/minimd_posfile.txt");
 #endif
-
+*/
   
   comm.timer = &timer;
   timer.array[TIME_TEST] = 0.0;
@@ -189,6 +189,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
   for ( int i = 0; i < x.extent(0); i++){
 
+  /*
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
   res_minimd_posfile << integrate_counter + 1 << " x(" <<i<<"):\n";
   res_minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n"; 
@@ -197,10 +198,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n";
 
 #endif
-
+*/
   }
 
-      std::cout << x(1,0) << "," << x(1,1) "," << x(1,2) << "\n";
+      std::cout << x(1,0) << "," << x(1,1) << "," << x(1,2) << "\n";
       const auto start{std::chrono::steady_clock::now()};
       initialIntegrate(n);
       integrate_counter++;
@@ -332,11 +333,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       } );
 #endif
     }
-
+/*
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
   res_minimd_posfile.close();
 #else
   minimd_posfile.close();
 #endif
-  
+  */
 }
