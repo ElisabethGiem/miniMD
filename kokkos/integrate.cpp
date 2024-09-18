@@ -36,6 +36,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <chrono>
+#include <fstream>
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
 #include <resilience/Resilience.hpp>
@@ -79,7 +80,7 @@ void Integrate::initialIntegrate(int step)
 KOKKOS_INLINE_FUNCTION
 void Integrate::operator() (TagInitialIntegrate, const int& i) const {
   v(i,0) += dtforce * f(i,0);
-    v(i,1) += dtforce * f(i,1);
+  v(i,1) += dtforce * f(i,1);
   v(i,2) += dtforce * f(i,2);
   x(i,0) += dt * v(i,0);
   x(i,1) += dt * v(i,1);
@@ -107,6 +108,16 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   //TODO RESILIENT TEST COUNTER: TO BE REOMVED
   int integrate_counter=0;
 
+  
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  std::ofstream res_minimd_posfile;
+  res_minimd_posfile.open("/home/eagiem/resilient-miniMD/miniMD/test/res_minimd_posfile.txt");
+#else
+  std::ofstream minimd_posfile;
+  minimd_posfile.open("/scratch/minimd_posfile.txt");
+#endif
+
+  
   comm.timer = &timer;
   timer.array[TIME_TEST] = 0.0;
 
@@ -175,13 +186,27 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       nlocal = atom.nlocal;
 
 //TODO: res + timer      
-      
+
+  for ( int i = 0; i < x.extent(0); i++){
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  res_minimd_posfile << integrate_counter + 1 << " x(" <<i<<"):\n";
+  res_minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n"; 
+#else
+  minimd_posfile << integrate_counter + 1 << " x(" <<i<< "):\n";   
+  minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n";
+
+#endif
+
+  }
+
+      std::cout << x(1,0) << "," << x(1,1) "," << x(1,2) << "\n";
       const auto start{std::chrono::steady_clock::now()};
       initialIntegrate(n);
       integrate_counter++;
       const auto stop{std::chrono::steady_clock::now()};
       const auto time = stop-start;
-      std::cout << "\n\nInitial integrate loop " << integrate_counter << " took " << time.count() << " nanoseconds.\n\n";
+      std::cout << "Initial integrate loop " << integrate_counter << " took " << time.count() << " nanoseconds.\n\n";
 
       timer.stamp();
 
@@ -307,4 +332,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
       } );
 #endif
     }
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  res_minimd_posfile.close();
+#else
+  minimd_posfile.close();
+#endif
+  
 }
