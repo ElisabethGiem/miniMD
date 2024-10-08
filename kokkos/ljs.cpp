@@ -546,7 +546,7 @@ int main(int argc, char** argv)
     create_velocity(in.t_request, atom, thermo);
 
   }
-
+#if 0
   if(me == 0)
     printf("# Done .... \n");
 
@@ -581,7 +581,7 @@ int main(int argc, char** argv)
     fprintf(stdout, "\t# Size of float: %i\n\n", (int) sizeof(MMD_float));
     fprintf(stdout, "\t# Restart: %i\n\n", restart);
   }
-
+#endif
   comm.exchange(atom);
   if(sort>0)
     atom.sort(neighbor);

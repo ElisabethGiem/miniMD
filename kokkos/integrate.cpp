@@ -89,7 +89,11 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate(int step)
 {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagFinalIntegrate>(0,nlocal), *this);
+#else
   Kokkos::parallel_for(Kokkos::RangePolicy<TagFinalIntegrate>(0,nlocal), *this);
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -117,7 +121,15 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   minimd_posfile.open("/scratch/minimd_posfile.txt");
 #endif
 */
-  
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  //KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000001);
+  KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000000001);  
+  //std::chrono::duration<long int, std::ratio<1, 1000000000>> total_initial_integrate_time{};
+#endif
+  std::chrono::duration<long int, std::ratio<1, 1000000000>> initial_integrate_time{};
+  std::chrono::duration<long int, std::ratio<1, 1000000000>> final_integrate_time{};
+  std::chrono::duration<long int, std::ratio<1, 1000000000>> total_integrate_time{};
+
   comm.timer = &timer;
   timer.array[TIME_TEST] = 0.0;
 
@@ -187,27 +199,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
 //TODO: res + timer      
 
-  for ( int i = 0; i < x.extent(0); i++){
-
-  /*
-#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-  res_minimd_posfile << integrate_counter + 1 << " x(" <<i<<"):\n";
-  res_minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n"; 
-#else
-  minimd_posfile << integrate_counter + 1 << " x(" <<i<< "):\n";   
-  minimd_posfile << x(i, 0) << "\n" << x(i,1) << "\n" << x(i, 2) << "\n";
-
-#endif
-*/
-  }
-
-      std::cout << x(1,0) << "," << x(1,1) << "," << x(1,2) << "\n";
       const auto start{std::chrono::steady_clock::now()};
       initialIntegrate(n);
       integrate_counter++;
       const auto stop{std::chrono::steady_clock::now()};
       const auto time = stop-start;
-      std::cout << "Initial integrate loop " << integrate_counter << " took " << time.count() << " nanoseconds.\n\n";
+      initial_integrate_time += time;
+      //std::cout << "Initial integrate loop " << integrate_counter << " took " << time.count() << " nanoseconds.\n";
 
       timer.stamp();
 
@@ -298,8 +296,12 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::fence();
 
-      //TODO: res + timer
+      //TODO: Here is the final integrate
+      const auto begin{std::chrono::steady_clock::now()};
       finalIntegrate(n);
+      const auto end{std::chrono::steady_clock::now()};
+      const auto pass = end-begin;
+      final_integrate_time += pass;
 
       //TODO: res + timer
       if(thermo.nstat) thermo.compute(n + 1, atom, neighbor, force, timer, comm);
@@ -340,4 +342,15 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   minimd_posfile.close();
 #endif
   */
+  total_integrate_time = initial_integrate_time + final_integrate_time;
+  std::cout << "All initial integrate loops took " << initial_integrate_time.count() << " nanoseconds.\n";
+  std::cout << "All final integrate loops took " << final_integrate_time.count() << " nanoseconds.\n";
+  std::cout << "Total parallel integration time was " << total_integrate_time.count() << " nanoseconds.\n";
+
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION 
+  KokkosResilience::print_total_error_time();
+  KokkosResilience::clear_duplicates_cache();
+  KokkosResilience::global_error_settings.reset();
+#endif
 }

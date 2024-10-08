@@ -48,7 +48,12 @@ class Integrate
     MMD_int ntimes;
     MMD_int nlocal, nmax;
     //TODO res
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    res_x_view_type x, v;
+    x_view_type f, xold;
+#else
     x_view_type x, v, f, xold;
+#endif    
     MMD_float mass;
 
     MMD_int sort_every;
