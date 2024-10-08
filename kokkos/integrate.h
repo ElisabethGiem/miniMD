@@ -24,7 +24,7 @@
    USA.  See also: http://www.gnu.org/licenses/lgpl.txt .
 
    For questions, contact Paul S. Crozier (pscrozi@sandia.gov) or
-   Christian Trott (crtrott@sandia.gov).
+0.150751   Christian Trott (crtrott@sandia.gov).
 
    Please read the accompanying README and LICENSE files.
 ---------------------------------------------------------------------- */

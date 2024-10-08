@@ -160,7 +160,7 @@ void read_lammps_header(Atom &atom)
 
   if(n == NSECTIONS) {
     char str[128];
-    sprintf(str, "Unknown identifier in data file: %s", keyword);
+    snprintf(str, 128, "Unknown identifier in data file: %s", keyword);
   }
 
   // error check on consistency of header values

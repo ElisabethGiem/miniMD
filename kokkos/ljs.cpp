@@ -45,6 +45,7 @@
 #include "force_eam.h"
 #include "force.h"
 #include "force_lj.h"
+#include <Kokkos_Core_fwd.hpp>
 
 #define MAXLINE 256
 
@@ -554,7 +555,7 @@ int main(int argc, char** argv)
     fprintf(stdout, "# " VARIANT_STRING " output ...\n");
     fprintf(stdout, "# Run Settings: \n");
     fprintf(stdout, "\t# MPI processes: %i\n", comm.nprocs);
-    fprintf(stdout, "\t# Host Threads: %i\n", Kokkos::HostSpace::execution_space::concurrency());
+    fprintf(stdout, "\t# Host Threads: %i\n", Kokkos::DefaultHostExecutionSpace().concurrency());
     fprintf(stdout, "\t# Inputfile: %s\n", input_file == 0 ? "in.lj.miniMD" : input_file);
     fprintf(stdout, "\t# Datafile: %s\n", in.datafile ? in.datafile : "None");
     fprintf(stdout, "# Physics Settings: \n");
