@@ -40,9 +40,9 @@
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
 #include <resilience/Resilience.hpp>
-#include <resilience/openMP/ResHostSpace.hpp>
-#include <resilience/openMP/ResOpenMP.hpp>
-#include <resilience/openMP/OpenMPResSubscriber.hpp>
+#include <resilience/exec_space/openMP/Resilient_HostSpace.hpp>
+#include <resilience/exec_space/openMP/Resilient_OpenMP.hpp>
+#include <resilience/exec_space/openMP/Resilient_OpenMP_Subscriber.hpp>
 #endif
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
@@ -122,13 +122,13 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #endif
 */
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-  //KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000001);
-  KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000000001);  
-  //std::chrono::duration<long int, std::ratio<1, 1000000000>> total_initial_integrate_time{};
+//  KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000001);
+    KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000000001);  
 #endif
-  std::chrono::duration<long int, std::ratio<1, 1000000000>> initial_integrate_time{};
-  std::chrono::duration<long int, std::ratio<1, 1000000000>> final_integrate_time{};
-  std::chrono::duration<long int, std::ratio<1, 1000000000>> total_integrate_time{};
+  std::chrono::duration<long int, std::nano> initial_integrate_time{};
+  std::chrono::duration<long int, std::nano> final_integrate_time{};
+  std::chrono::duration<long int, std::nano> total_integrate_time{};
+  std::chrono::duration<long int, std::nano> total_force_time{};
 
   comm.timer = &timer;
   timer.array[TIME_TEST] = 0.0;
@@ -277,8 +277,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 
       Kokkos::Profiling::pushRegion("force");
       force->evflag = (n + 1) % thermo.nstat == 0;
-      //TODO: res + timer
+      const auto before{std::chrono::steady_clock::now()};
       force->compute(atom, neighbor, comm, comm.me);
+      const auto after{std::chrono::steady_clock::now()};
+      const auto awhile = after-before;
+      total_force_time += awhile;
       Kokkos::Profiling::popRegion();
 
       timer.stamp(TIME_FORCE);
@@ -343,10 +346,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #endif
   */
   total_integrate_time = initial_integrate_time + final_integrate_time;
-  std::cout << "All initial integrate loops took " << initial_integrate_time.count() << " nanoseconds.\n";
-  std::cout << "All final integrate loops took " << final_integrate_time.count() << " nanoseconds.\n";
-  std::cout << "Total parallel integration time was " << total_integrate_time.count() << " nanoseconds.\n";
-
+  std::cout << "All initial integrate loops took " << initial_integrate_time.count() * 0.000000001 << " seconds.\n";
+  std::cout << "All final integrate loops took " << final_integrate_time.count() * 0.000000001 << " seconds.\n";
+  std::cout << "Total parallel integration time was " << total_integrate_time.count() * 0.000000001 << " seconds.\n";
+  std::cout << "Total force kernel time was " << total_force_time.count() * 0.000000001 << " seconds.\n";
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION 
   KokkosResilience::print_total_error_time();

@@ -53,8 +53,13 @@ class Neighbor
     int ncalls;                      // # of times build has been called
     int max_totalneigh;              // largest # of neighbors ever stored
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION    
+    res_int_1d_view_type numneigh;
+    res_int_2d_view_type neighbors;
+#else
     int_1d_view_type numneigh;                   // # of neighbors for each atom
     int_2d_view_type neighbors;                  // array of neighbors of each atom
+#endif
     int maxneighs;				   // max number of neighbors per atom
     int halfneigh;
     int team_neigh_build;

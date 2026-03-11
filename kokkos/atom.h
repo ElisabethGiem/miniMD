@@ -68,13 +68,12 @@ class Atom
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
     res_x_view_type x;
     res_x_view_type v;
-    //res_x_view_type f;
+    res_x_view_type f;
 #else
-    //x_view_type f;
+    x_view_type f;
     x_view_type x;
     x_view_type v;
 #endif
-    x_view_type f;
 
     x_host_view_type h_x;
     x_host_view_type h_v;
@@ -82,7 +81,13 @@ class Atom
 
 
     int ntypes;
-    int_1d_view_type type, new_type, old_type;
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    res_int_1d_view_type type;
+#else
+    int_1d_view_type type;    
+#endif
+    int_1d_view_type new_type, old_type;
     int_1d_host_view_type h_type;
 
     x_view_type xold, new_x, new_v, old_x, old_v;

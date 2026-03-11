@@ -38,6 +38,7 @@
 #include "comm.h"
 #include "neighbor.h"
 #include "memory.h"
+#include <iostream>
 
 #define MAXLINE 1024
 
@@ -88,6 +89,7 @@ void ForceEAM::setup()
 
 void ForceEAM::compute(Atom &atom, Neighbor &neighbor, Comm &comm, int me)
 {
+  std::cout << "Using ForceEAM" << std::endl;
   if(neighbor.halfneigh)
     return compute_halfneigh(atom, neighbor, comm, me);
   else

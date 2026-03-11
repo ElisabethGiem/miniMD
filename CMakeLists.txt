@@ -31,8 +31,8 @@ target_compile_definitions(minimd_resil PRIVATE PREC_TIMER)
 # Dependencies
 if (MINIMD_USE_MPISTUB)
    find_library( mpi_stub_ NAMES libmpi_stubs.a libmpi_stubs mpi_stubs HINTS ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs )
-   #add_library(mpi_stubs)
-   #target_link_libraries(minimd PRIVATE mpi_stubs)
+   add_library(mpi_stubs)
+   target_link_libraries(minimd PRIVATE mpi_stubs)
    target_link_libraries(minimd PRIVATE ${mpi_stub_})
    target_include_directories(minimd PUBLIC
                            ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs

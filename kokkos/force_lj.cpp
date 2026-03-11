@@ -32,6 +32,7 @@
 #include "stdio.h"
 #include "math.h"
 #include "force_lj.h"
+#include <iostream>
 
 #ifndef VECTORLENGTH
 #define VECTORLENGTH 4
@@ -45,19 +46,35 @@ ForceLJ::ForceLJ(int ntypes_)
   style = FORCELJ;
   ntypes = ntypes_;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION  
+  res_float_1d_view_type d_cut("ForceLJ::cutforcesq",ntypes*ntypes);
+#else
   float_1d_view_type d_cut("ForceLJ::cutforcesq",ntypes*ntypes);
+#endif
   float_1d_host_view_type h_cut = Kokkos::create_mirror_view(d_cut);
   cutforcesq = d_cut;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  res_float_1d_view_type d_epsilon("ForceLJ::epsilon",ntypes*ntypes);
+#else
   float_1d_view_type d_epsilon("ForceLJ::epsilon",ntypes*ntypes);
+#endif
   float_1d_host_view_type h_epsilon = Kokkos::create_mirror_view(d_epsilon);
   epsilon = d_epsilon;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION  
+  res_float_1d_view_type d_sigma6("ForceLJ::sigma6",ntypes*ntypes);
+#else
   float_1d_view_type d_sigma6("ForceLJ::sigma6",ntypes*ntypes);
+#endif
   float_1d_host_view_type h_sigma6 = Kokkos::create_mirror_view(d_sigma6);
   sigma6 = d_sigma6;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  res_float_1d_view_type d_sigma("ForceLJ::sigma",ntypes*ntypes);
+#else
   float_1d_view_type d_sigma("ForceLJ::sigma",ntypes*ntypes);
+#endif
   float_1d_host_view_type h_sigma = Kokkos::create_mirror_view(d_sigma);
   sigma = d_sigma;
 
@@ -84,7 +101,11 @@ ForceLJ::~ForceLJ() {}
 
 void ForceLJ::setup()
 {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  res_float_1d_view_type d_cut("ForceLJ::cutforcesq", ntypes*ntypes);
+#else
   float_1d_view_type d_cut("ForceLJ::cutforcesq",ntypes*ntypes);
+#endif
   float_1d_host_view_type h_cut = Kokkos::create_mirror_view(d_cut);
   cutforcesq = d_cut;
 
@@ -128,38 +149,63 @@ void ForceLJ::compute(Atom &atom, Neighbor &neighbor, Comm &comm, int me)
 
   if(evflag) {
     if(use_oldcompute && host_device)
+    {
       return compute_original<1>(atom, neighbor, me);
-
+    } 
     if(neighbor.halfneigh) {
       if(neighbor.ghost_newton) {
         if(nthreads > 1 || !host_device)
-          return compute_halfneigh_threaded<1, 1>(atom, neighbor, me);
-        else
+        {
+	  return compute_halfneigh_threaded<1, 1>(atom, neighbor, me);
+	}
+	else
+	{
           return compute_halfneigh<1, 1>(atom, neighbor, me);
+	}
       } else {
         if(nthreads > 1 || !host_device)
+	{
           return compute_halfneigh_threaded<1, 0>(atom, neighbor, me);
+	}
         else
+	{
           return compute_halfneigh<1, 0>(atom, neighbor, me);
+	}
       }
-    } else return compute_fullneigh<1>(atom, neighbor, me);
+    } else 
+      {
+	return compute_fullneigh<1>(atom, neighbor, me);
+      }
   } else {
     if(use_oldcompute)
+    {
       return compute_original<0>(atom, neighbor, me);
+    }
 
     if(neighbor.halfneigh) {
       if(neighbor.ghost_newton) {
         if(nthreads > 1 || !host_device)
+	{
           return compute_halfneigh_threaded<0, 1>(atom, neighbor, me);
+	}
         else
+	{
           return compute_halfneigh<0, 1>(atom, neighbor, me);
+	}
       } else {
         if(nthreads > 1 || !host_device)
+	{
           return compute_halfneigh_threaded<0, 0>(atom, neighbor, me);
+	}
         else
+	{
           return compute_halfneigh<0, 0>(atom, neighbor, me);
+	}
       }
-    } else return compute_fullneigh<0>(atom, neighbor, me);
+    } else 
+      {
+	return compute_fullneigh<0>(atom, neighbor, me);
+      }
 
   }
 }
@@ -172,7 +218,6 @@ void ForceLJ::compute_original(Atom &atom, Neighbor &neighbor, int me)
 {
   eng_vdwl = 0;
   virial = 0;
-
   // loop over all neighbors of my atoms
   // store force on both atoms i and j
 
@@ -218,7 +263,7 @@ void ForceLJ::compute_original(Atom &atom, Neighbor &neighbor, int me)
 template<int EVFLAG, int GHOST_NEWTON>
 void ForceLJ::compute_halfneigh(Atom &atom, Neighbor &neighbor, int me)
 {
-
+	
   // loop over all neighbors of my atoms
   // store force on both atoms i and j
   MMD_float t_energy = 0;
@@ -288,20 +333,43 @@ template<int EVFLAG, int GHOST_NEWTON>
 void ForceLJ::compute_halfneigh_threaded(Atom &atom, Neighbor &neighbor, int me)
 {
   eng_virial_type t_eng_virial;
-
   // loop over all neighbors of my atoms
   // store force on both atoms i and j
 
   if(ntypes>MAX_STACK_TYPES) {
     if(EVFLAG)
+    {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_reduce(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagComputeHalfNeighThread<1,GHOST_NEWTON,0> >(0,nlocal), *this , t_eng_virial);
+#else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeHalfNeighThread<1,GHOST_NEWTON,0> >(0,nlocal), *this , t_eng_virial);
+#endif
+    }
     else
+    {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagComputeHalfNeighThread<0,GHOST_NEWTON,0> >(0,nlocal), *this );
+#else
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeHalfNeighThread<0,GHOST_NEWTON,0> >(0,nlocal), *this );
+#endif
+    }
   } else {
     if(EVFLAG)
+    {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<KokkosResilience::ResOpenMP,TagComputeHalfNeighThread<1,GHOST_NEWTON,1> >(0,nlocal), *this , t_eng_virial);
+#else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeHalfNeighThread<1,GHOST_NEWTON,1> >(0,nlocal), *this , t_eng_virial);
+#endif      
+    }
     else
+    {
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_for(Kokkos::RangePolicy<KokkosResilience::ResOpenMP,TagComputeHalfNeighThread<0,GHOST_NEWTON,1> >(0,nlocal), *this );
+#else
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeHalfNeighThread<0,GHOST_NEWTON,1> >(0,nlocal), *this );
+#endif
+    }
   }
   eng_vdwl += t_eng_virial.eng;
   virial += t_eng_virial.virial;
@@ -347,8 +415,12 @@ void ForceLJ::operator() (TagComputeHalfNeighThread<EVFLAG,GHOST_NEWTON,STACK_PA
 
 template<int EVFLAG, int GHOST_NEWTON, int STACK_PARAMS>
 KOKKOS_INLINE_FUNCTION
-void ForceLJ::operator() (TagComputeHalfNeighThread<EVFLAG,GHOST_NEWTON,STACK_PARAMS> , const int& i, eng_virial_type& eng_virial) const {
+void ForceLJ::operator() (TagComputeHalfNeighThread<EVFLAG,GHOST_NEWTON,STACK_PARAMS> , const int& i, 
+  eng_virial_type& eng_virial
+) const {
 
+  if (i == 0){	
+  }
   const int numneighs = numneigh[i];
 
   const MMD_float xtmp = x(i,0);
@@ -383,10 +455,9 @@ void ForceLJ::operator() (TagComputeHalfNeighThread<EVFLAG,GHOST_NEWTON,STACK_PA
         f_a(j,1) -= dely * force;
         f_a(j,2) -= delz * force;
       }
-
       if(EVFLAG) {
         const MMD_float scale = (GHOST_NEWTON || j < nlocal) ? 1.0 : 0.5;
-        eng_virial.eng += scale * 4.0 * sr6 * (sr6 - 1.0) * (STACK_PARAMS?epsilon_s[type_ij]:epsilon(type_ij));
+	eng_virial.eng += scale * 4.0 * sr6 * (sr6 - 1.0) * (STACK_PARAMS?epsilon_s[type_ij]:epsilon(type_ij));
         eng_virial.virial += scale * (delx * delx + dely * dely + delz * delz) * force;
       }
     }
@@ -407,6 +478,9 @@ void ForceLJ::operator() (TagComputeFullNeigh<EVFLAG,STACK_PARAMS> , const int& 
 template<int EVFLAG, int STACK_PARAMS>
 KOKKOS_INLINE_FUNCTION
 void ForceLJ::operator() (TagComputeFullNeigh<EVFLAG,STACK_PARAMS> , const int& i, eng_virial_type& eng_virial) const {
+
+  if (i == 0){
+  }
 
   const int numneighs = numneigh[i];
 
