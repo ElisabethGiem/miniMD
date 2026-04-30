@@ -40,9 +40,9 @@
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
 #include <resilience/Resilience.hpp>
-#include <resilience/exec_space/openMP/Resilient_HostSpace.hpp>
-#include <resilience/exec_space/openMP/Resilient_OpenMP.hpp>
-#include <resilience/exec_space/openMP/Resilient_OpenMP_Subscriber.hpp>
+#include <resilience/exec_space/cuda/Resilient_CudaSpace.hpp>
+#include <resilience/exec_space/cuda/Resilient_Cuda.hpp>
+#include <resilience/exec_space/cuda/Resilient_Cuda_Subscriber.hpp>
 #endif
 
 #ifdef KOKKOS_ENABLE_MANUAL_CHECKPOINT
@@ -70,11 +70,11 @@ void Integrate::setup()
 
 void Integrate::initialIntegrate(int step)
 {
-#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-  Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagInitialIntegrate>(0,nlocal), *this);
-#else      
+//#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+// Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResCuda, TagInitialIntegrate>(0,nlocal), *this);
+//#else      
   Kokkos::parallel_for(Kokkos::RangePolicy<TagInitialIntegrate>(0,nlocal), *this);
-#endif
+//#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -89,11 +89,11 @@ void Integrate::operator() (TagInitialIntegrate, const int& i) const {
 
 void Integrate::finalIntegrate(int step)
 {
-#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-  Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagFinalIntegrate>(0,nlocal), *this);
-#else
+//#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+//  Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResCuda, TagFinalIntegrate>(0,nlocal), *this);
+//#else
   Kokkos::parallel_for(Kokkos::RangePolicy<TagFinalIntegrate>(0,nlocal), *this);
-#endif
+//#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -122,8 +122,11 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #endif
 */
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  //Way way too many errors:
+  KokkosResilience::global_error_settings = KokkosResilience::Error(0.001);
 //  KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000001);
-    KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000000001);  
+  //100x more for omp than cuda_integrate vvv
+  //KokkosResilience::global_error_settings = KokkosResilience::Error(0.00000000001);  
 #endif
   std::chrono::duration<long int, std::nano> initial_integrate_time{};
   std::chrono::duration<long int, std::nano> final_integrate_time{};
@@ -349,6 +352,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   std::cout << "All initial integrate loops took " << initial_integrate_time.count() * 0.000000001 << " seconds.\n";
   std::cout << "All final integrate loops took " << final_integrate_time.count() * 0.000000001 << " seconds.\n";
   std::cout << "Total parallel integration time was " << total_integrate_time.count() * 0.000000001 << " seconds.\n";
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  std::chrono::duration<double> secs = KokkosResilience::combiner_seconds;
+  std::cout << "Total combiner time was " << secs.count() << " seconds" << std::endl;
+#endif  
   std::cout << "Total force kernel time was " << total_force_time.count() * 0.000000001 << " seconds.\n";
 
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION 

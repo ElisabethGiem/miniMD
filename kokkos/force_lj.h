@@ -82,11 +82,7 @@ class ForceLJ : Force
     template<int EVFLAG, int GHOST_NEWTON, int STACK_PARAMS>
     KOKKOS_INLINE_FUNCTION
     void operator() (TagComputeHalfNeighThread<EVFLAG,GHOST_NEWTON,STACK_PARAMS> , const int& i, 
-//#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION 
-//		    res_eng_virial_type& eng_virial 
-//#else
                     eng_virial_type& eng_virial 
-//#endif
 		    ) const;
 
     template<int EVFLAG, int STACK_PARAMS>

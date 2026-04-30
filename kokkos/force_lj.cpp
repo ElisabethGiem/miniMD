@@ -148,62 +148,83 @@ void ForceLJ::compute(Atom &atom, Neighbor &neighbor, Comm &comm, int me)
   /* switch to correct compute */
 
   if(evflag) {
+ 
+//    std::cout << "level 1: evflag present" << std::endl;	  
     if(use_oldcompute && host_device)
     {
+//      std::cout << "level 2: use oldcompute AND host_device" << std::endl;	    
       return compute_original<1>(atom, neighbor, me);
     } 
     if(neighbor.halfneigh) {
+//      std::cout << "level 2: halfneigh" << std::endl;
       if(neighbor.ghost_newton) {
+//        std::cout << "level 3: ghost_newton" << std::endl;
         if(nthreads > 1 || !host_device)
         {
+//          std::cout << "level 4: nthreads>1 (no) OR !host_device" << std::endl;
 	  return compute_halfneigh_threaded<1, 1>(atom, neighbor, me);
 	}
 	else
 	{
+//          std::cout << "level 4: nthreads=1 AND on host_device" << std::endl;
           return compute_halfneigh<1, 1>(atom, neighbor, me);
 	}
       } else {
+//        std::cout << "level 3: NO ghost_newton" << std::endl;
         if(nthreads > 1 || !host_device)
 	{
+//          std::cout << "level 4: nthreads>1 (no) OR !host_device" << std::endl;
           return compute_halfneigh_threaded<1, 0>(atom, neighbor, me);
 	}
         else
 	{
+//          std::cout << "level 4: nthreads=1 AND on host_device" << std::endl;
           return compute_halfneigh<1, 0>(atom, neighbor, me);
 	}
       }
     } else 
       {
+//	std::cout << "level 2: NO halfneigh using fullneigh" << std::endl;
 	return compute_fullneigh<1>(atom, neighbor, me);
       }
   } else {
+//    std::cout << "level 1 evflag NOT present" << std::endl;
     if(use_oldcompute)
     {
+//      std::cout << "level 2: use oldcompute NO SPECIFIED host_device" << std::endl;	    
       return compute_original<0>(atom, neighbor, me);
     }
 
     if(neighbor.halfneigh) {
+//      std::cout << "level 2: halfneigh" << std::endl;
       if(neighbor.ghost_newton) {
+//        std::cout << "level 3: ghost_newton" << std::endl;
         if(nthreads > 1 || !host_device)
 	{
+//          std::cout << "level 4: nthreads>1 (no) OR !host_device" << std::endl;
           return compute_halfneigh_threaded<0, 1>(atom, neighbor, me);
 	}
         else
 	{
+//          std::cout << "level 4: nthreads=1 AND on host_device" << std::endl;
           return compute_halfneigh<0, 1>(atom, neighbor, me);
 	}
       } else {
+//        std::cout << "level 3: NO ghost_newton" << std::endl;
         if(nthreads > 1 || !host_device)
 	{
+//          std::cout << "level 4: nthreads>1 (no) OR !host_device" << std::endl;
           return compute_halfneigh_threaded<0, 0>(atom, neighbor, me);
 	}
         else
 	{
+//          std::cout << "level 4: nthreads=1 AND on host_device" << std::endl;
           return compute_halfneigh<0, 0>(atom, neighbor, me);
 	}
       }
     } else 
       {
+//        std::cout << "level 2: NO halfneigh use fullneigh" << std::endl;
 	return compute_fullneigh<0>(atom, neighbor, me);
       }
 
@@ -340,7 +361,8 @@ void ForceLJ::compute_halfneigh_threaded(Atom &atom, Neighbor &neighbor, int me)
     if(EVFLAG)
     {
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-      Kokkos::parallel_reduce(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagComputeHalfNeighThread<1,GHOST_NEWTON,0> >(0,nlocal), *this , t_eng_virial);
+//      std::cout << "MAX_STACK_TYPES and EVFLAG and !host_device" << std::endl;	    
+      Kokkos::parallel_reduce(Kokkos::RangePolicy< KokkosResilience::ResCuda, TagComputeHalfNeighThread<1,GHOST_NEWTON,0> >(0,nlocal), *this , t_eng_virial);
 #else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeHalfNeighThread<1,GHOST_NEWTON,0> >(0,nlocal), *this , t_eng_virial);
 #endif
@@ -348,7 +370,8 @@ void ForceLJ::compute_halfneigh_threaded(Atom &atom, Neighbor &neighbor, int me)
     else
     {
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-      Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResOpenMP, TagComputeHalfNeighThread<0,GHOST_NEWTON,0> >(0,nlocal), *this );
+//      std::cout << "MAX_STACK_TYPES and !EVFLAG and !host_device" << std::endl;	    
+      Kokkos::parallel_for(Kokkos::RangePolicy< KokkosResilience::ResCuda, TagComputeHalfNeighThread<0,GHOST_NEWTON,0> >(0,nlocal), *this );
 #else
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeHalfNeighThread<0,GHOST_NEWTON,0> >(0,nlocal), *this );
 #endif
@@ -357,7 +380,8 @@ void ForceLJ::compute_halfneigh_threaded(Atom &atom, Neighbor &neighbor, int me)
     if(EVFLAG)
     {
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<KokkosResilience::ResOpenMP,TagComputeHalfNeighThread<1,GHOST_NEWTON,1> >(0,nlocal), *this , t_eng_virial);
+//      std::cout << "!MAX_STACK_TYPES and EVFLAG and !host_device" << std::endl;	    
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeHalfNeighThread<1,GHOST_NEWTON,1> >(0,nlocal), *this , t_eng_virial);
 #else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeHalfNeighThread<1,GHOST_NEWTON,1> >(0,nlocal), *this , t_eng_virial);
 #endif      
@@ -365,7 +389,8 @@ void ForceLJ::compute_halfneigh_threaded(Atom &atom, Neighbor &neighbor, int me)
     else
     {
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-      Kokkos::parallel_for(Kokkos::RangePolicy<KokkosResilience::ResOpenMP,TagComputeHalfNeighThread<0,GHOST_NEWTON,1> >(0,nlocal), *this );
+//      std::cout << "!MAX_STACK_TYPES and !EVFLAG and !host_device" << std::endl;	    
+      Kokkos::parallel_for(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeHalfNeighThread<0,GHOST_NEWTON,1> >(0,nlocal), *this );
 #else
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeHalfNeighThread<0,GHOST_NEWTON,1> >(0,nlocal), *this );
 #endif
@@ -390,14 +415,30 @@ void ForceLJ::compute_fullneigh(Atom &atom, Neighbor &neighbor, int me)
 
   if(ntypes>MAX_STACK_TYPES) {
     if(EVFLAG)
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION    
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeFullNeigh<1,0> >(0,nlocal), *this , t_eng_virial);
+#else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeFullNeigh<1,0> >(0,nlocal), *this , t_eng_virial);
+#endif    
     else
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_for(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeFullNeigh<0,0> >(0,nlocal), *this );
+#else	    
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeFullNeigh<0,0> >(0,nlocal), *this );
+#endif
   } else {
     if(EVFLAG)
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeFullNeigh<1,1> >(0,nlocal), *this , t_eng_virial);
+#else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<TagComputeFullNeigh<1,1> >(0,nlocal), *this , t_eng_virial);
+#endif
     else
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      Kokkos::parallel_for(Kokkos::RangePolicy<KokkosResilience::ResCuda,TagComputeFullNeigh<0,1> >(0,nlocal), *this );
+#else
       Kokkos::parallel_for(Kokkos::RangePolicy<TagComputeFullNeigh<0,1> >(0,nlocal), *this );
+#endif
   }
   t_eng_virial.eng *= 4.0;
   t_eng_virial.virial *= 0.5;

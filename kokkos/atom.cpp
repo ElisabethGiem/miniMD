@@ -69,9 +69,9 @@ void Atom::growarray()
 //  printf("grow array: %ld\n", nmax);
 //  fflush(stdout);
   nmax += atom_block;
-  Kokkos::resize(x,nmax);
-  Kokkos::resize(v,nmax);
-  Kokkos::resize(f,nmax);
+  Kokkos::resize(Kokkos::view_alloc(Kokkos::Cuda()),x,nmax);
+  Kokkos::resize(Kokkos::view_alloc(Kokkos::Cuda()),v,nmax);
+  Kokkos::resize(Kokkos::view_alloc(Kokkos::Cuda()),f,nmax);
   Kokkos::resize(type,nmax);
   Kokkos::resize(xold,nmax);
   h_x = Kokkos::create_mirror_view(x);
@@ -87,9 +87,9 @@ void Atom::addatom(MMD_float x_in, MMD_float y_in, MMD_float z_in,
     Kokkos::deep_copy(v,h_v);
     Kokkos::deep_copy(type,h_type);
     growarray();
-    Kokkos::deep_copy(h_x,x);
-    Kokkos::deep_copy(h_v,v);
-    Kokkos::deep_copy(h_type,type);
+    Kokkos::deep_copy(Kokkos::Cuda(),h_x,x);
+    Kokkos::deep_copy(Kokkos::Cuda(),h_v,v);
+    Kokkos::deep_copy(Kokkos::Cuda(),h_type,type);
   }
 
   h_x(nlocal,0) = x_in;

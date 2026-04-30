@@ -77,9 +77,13 @@ void Neighbor::build(Atom &atom)
 
   if(nall > nmax) {
     nmax = nall;
-
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    numneigh = res_int_1d_view_type("Neighbor::numneigh",nmax); 
+    neighbors = res_int_2d_view_type("Neighbor::neighbors",nmax , maxneighs);
+#else
     numneigh = int_1d_view_type("Neighbor::numneigh",nmax);
     neighbors = int_2d_view_type("Neighbor::neighbors",nmax , maxneighs);
+#endif
   }
 
   /* bin local & ghost atoms */

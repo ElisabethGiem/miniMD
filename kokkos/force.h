@@ -74,6 +74,15 @@ class Force
     int nlocal;
     int nall;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION    
+    res_int_1d_const_view_type numneigh;
+    res_int_2d_const_view_type neighbors;
+
+    res_x_rnd_view_type x;
+    res_x_view_type f;
+    res_x_atomic_view_type f_a;
+    res_int_1d_rnd_view_type type;
+#else
     int_1d_const_view_type numneigh;                   // # of neighbors for each atom
     int_2d_const_view_type neighbors;                  // array of neighbors of each atom
 
@@ -81,6 +90,7 @@ class Force
     x_view_type f;
     x_atomic_view_type f_a;
     int_1d_rnd_view_type type;
+#endif
 
     MMD_int me;
 };

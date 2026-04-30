@@ -296,9 +296,9 @@ int read_lammps_data(Atom &atom, Comm &comm, Neighbor &neighbor, Integrate &inte
     return 1;
   }
 
-  Kokkos::deep_copy(atom.x,atom.h_x);
-  Kokkos::deep_copy(atom.v,atom.h_v);
-  Kokkos::deep_copy(atom.type,atom.h_type);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.x,atom.h_x);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.v,atom.h_v);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.type,atom.h_type);
   // check that all atoms were assigned correctly
   return 0;
 }
@@ -463,7 +463,7 @@ void create_velocity(double t_request, Atom &atom, Thermo &thermo)
   int i;
 
   /* zero center-of-mass motion */
-  Kokkos::deep_copy(atom.h_v,atom.v);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.h_v,atom.v);
   double vxtot = 0.0;
   double vytot = 0.0;
   double vztot = 0.0;
@@ -491,10 +491,10 @@ void create_velocity(double t_request, Atom &atom, Thermo &thermo)
   /* rescale velocities, including old ones */
   thermo.t_act = 0;
 
-  Kokkos::deep_copy(atom.v,atom.h_v);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.v,atom.h_v);
   double t = thermo.temperature(atom);
   double factor = sqrt(t_request / t);
-  Kokkos::deep_copy(atom.h_v,atom.v);
+  Kokkos::deep_copy(Kokkos::Cuda(),atom.h_v,atom.v);
 
   for(i = 0; i < atom.nlocal; i++) {
     atom.h_v(i,0) *= factor;

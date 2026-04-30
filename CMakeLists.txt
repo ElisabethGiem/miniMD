@@ -42,7 +42,7 @@ if (MINIMD_USE_MPISTUB)
                            ${PROJECT_SOURCE_DIR}/kokkos/MPI-Stubs
 			   )
 else()
-   find_package(MPI REQUIRED)
+   find_package(MPI REQUIRED COMPONENTS CXX)
    target_link_libraries(minimd PRIVATE MPI::MPI_CXX)
    target_link_libraries(minimd_resil PRIVATE MPI::MPI_CXX)
 endif()
