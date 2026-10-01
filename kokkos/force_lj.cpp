@@ -33,6 +33,7 @@
 #include "math.h"
 #include "force_lj.h"
 #include <iostream>
+#include "types.h"
 
 #ifndef VECTORLENGTH
 #define VECTORLENGTH 4
@@ -133,17 +134,27 @@ void ForceLJ::compute(Atom &atom, Neighbor &neighbor, Comm &comm, int me)
   nlocal = atom.nlocal;
   nall = atom.nlocal + atom.nghost;
 
+//#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+//  x = static_cast<res_x_rnd_view_type>(atom.x);
+//  f_a = static_cast<res_x_atomic_view_type>(atom.f);
+//  type = static_cast<res_int_1d_rnd_view_type>(atom.type);
+//  numneigh = static_cast<res_int_1d_const_view_type>(neighbor.numneigh);
+//  neighbors = static_cast<res_int_2d_const_view_type>(neighbor.neighbors);
+//#else
   x = atom.x;
   f_a = atom.f;
-  f = atom.f;
   type = atom.type;
-
   neighbors = neighbor.neighbors;
   numneigh = neighbor.numneigh;
+//#endif
+  f = atom.f;
 
   // clear force on own and ghost atoms
-
+#if defined(KOKKOS_ENABLE_CUDA) && defined (KOKKOS_ENABLE_RESILIENT_EXECUTION)
+  Kokkos::deep_copy(Kokkos::Cuda(),f,0.0);
+#else
   Kokkos::deep_copy(f,0.0);
+#endif
 
   /* switch to correct compute */
 

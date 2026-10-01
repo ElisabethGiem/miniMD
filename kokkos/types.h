@@ -88,6 +88,16 @@ using ResilientView = Kokkos::View<
                               KokkosResilience::ResilientDuplicatesSubscriber>,
                       MemoryTraits...
                       >;
+
+template<typename DataType, typename... MemoryTraits>
+using ResilientViewRight = Kokkos::View<
+                           DataType,
+                           Kokkos::LayoutRight,
+			   KokkosResilience::ResCudaSpace,
+                           Kokkos::Experimental::SubscribableViewHooks<
+                                   KokkosResilience::ResilientDuplicatesSubscriber>,
+                           MemoryTraits...
+                           >;
 #endif
 
 typedef Kokkos::DefaultExecutionSpace DeviceType;
@@ -99,9 +109,7 @@ typedef Kokkos::DualView<MMD_int*> int_1d_dual_view_type;
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
 
 //Currently in ResCudaSpace, automatically LayoutLeft
-using res_x_view_type = Kokkos::View< MMD_float*[PAD], Kokkos::LayoutRight, KokkosResilience::ResCudaSpace,
-                        Kokkos::Experimental::SubscribableViewHooks<
-                                KokkosResilience::ResilientDuplicatesSubscriber> >;
+using res_x_view_type = ResilientViewRight< MMD_float*[PAD] >;
 using res_float_1d_view_type = ResilientView<MMD_float*>;
 using res_int_1d_view_type = ResilientView<MMD_int*>;
 using res_int_2d_view_type = ResilientView<MMD_int**>;
@@ -124,7 +132,7 @@ typedef Kokkos::View<const MMD_int**> int_2d_const_view_type;
 
 //Atomic
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-using res_x_atomic_view_type = ResilientView<MMD_float*[PAD],Kokkos::MemoryTraits<Kokkos::Atomic>>;
+using res_x_atomic_view_type = ResilientViewRight<MMD_float*[PAD],Kokkos::MemoryTraits<Kokkos::Atomic>>;
 #endif
 typedef Kokkos::View<MMD_float*[PAD],Kokkos::LayoutRight,Kokkos::MemoryTraits<Kokkos::Atomic> > x_atomic_view_type;
 typedef Kokkos::View<MMD_float*,Kokkos::MemoryTraits<Kokkos::Atomic> > float_1d_atomic_view_type;
@@ -136,7 +144,7 @@ typedef Kokkos::View<MMD_float*,Kokkos::MemoryTraits<Kokkos::Atomic|Kokkos::Unma
 
 //RandomAccess
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
-using res_x_rnd_view_type = ResilientView<MMD_float*[PAD],Kokkos::MemoryTraits<Kokkos::RandomAccess>>;
+using res_x_rnd_view_type = ResilientViewRight<MMD_float*[PAD],Kokkos::MemoryTraits<Kokkos::RandomAccess>>;
 using res_int_1d_rnd_view_type = ResilientView<MMD_int*,Kokkos::MemoryTraits<Kokkos::RandomAccess>>;
 #endif
 typedef Kokkos::View<const MMD_float*[PAD],Kokkos::LayoutRight,Kokkos::MemoryTraits<Kokkos::RandomAccess> > x_rnd_view_type;
@@ -161,14 +169,14 @@ struct eng_virial_type {
 
   KOKKOS_INLINE_FUNCTION
   eng_virial_type& operator += (const eng_virial_type& src) {
-    eng+=src.eng;
-    virial+=src.virial;
+    eng += src.eng;
+    virial += src.virial;
     return *this;
   }
   KOKKOS_INLINE_FUNCTION
   void operator += (const volatile eng_virial_type& src) volatile {
-    eng+=src.eng;
-    virial+=src.virial;
+    eng = eng + src.eng;
+    virial = virial + src.virial;
   }
 
   KOKKOS_INLINE_FUNCTION

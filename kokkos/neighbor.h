@@ -77,10 +77,17 @@ class Neighbor
     // Atom is going to call binatoms etc for sorting
     void binatoms(Atom & atom, int count = -1);           // bin all atoms
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    res_int_1d_view_type bincount;
+    res_int_2d_view_type bins; 
+    res_int_1d_view_type bin_has_local;
+    res_int_1d_view_type bin_list;
+#else
     int_1d_view_type bincount;          // ptr to 1st atom in each bin
     int_2d_view_type bins; // ptr to next atom in each bin
     int_1d_view_type bin_has_local;
     int_1d_view_type bin_list;
+#endif
 
     int mbins;                       // binning parameters
     int mbinx, mbiny, mbinz;
@@ -113,7 +120,12 @@ class Neighbor
     int ntypes;                      // number of atom types
 
     int nstencil;                    // # of bins in stencil
-    int_1d_view_type stencil;                    // stencil list of bin offsets
+
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION    
+    res_int_1d_view_type stencil;
+#else
+    int_1d_view_type stencil;			 // stencil list of bin offsets
+#endif
 
     int mbinxlo, mbinylo, mbinzlo;
     int nextx, nexty, nextz;
@@ -128,11 +140,19 @@ class Neighbor
     KOKKOS_INLINE_FUNCTION
     int coord2bin(MMD_float, MMD_float, MMD_float) const;   // mapping atom coord to a bin
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+    res_x_rnd_view_type x;
+    res_int_1d_rnd_view_type type;
+    int nlocal;
+    res_int_1d_view_type new_maxneighs;
+    res_int_1d_view_type::HostMirror h_new_maxneighs;
+#else    
     x_rnd_view_type x;
     int_1d_rnd_view_type type;
     int nlocal;
     int_1d_view_type new_maxneighs;
     int_1d_host_view_type h_new_maxneighs;
+#endif
 };
 
 #endif

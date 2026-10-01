@@ -34,6 +34,9 @@
 #include "mpi.h"
 #include "comm.h"
 
+#include <typeinfo>
+#include <iostream>
+
 #define BUFFACTOR 1.5
 #define BUFMIN 1000
 #define BUFEXTRA 100

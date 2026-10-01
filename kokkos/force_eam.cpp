@@ -124,7 +124,11 @@ void ForceEAM::compute_halfneigh(Atom &atom, Neighbor &neighbor, Comm &comm, int
 
   // zero out density
 
+#if defined(KOKKOS_ENABLE_CUDA) && defined (KOKKOS_ENABLE_RESILIENT_EXECUTION)
+  Kokkos::deep_copy(Kokkos::Cuda(),f,0);
+#else
   Kokkos::deep_copy(f,0);
+#endif
   Kokkos::deep_copy(rho,0);
 
   // rho = density at each atom
