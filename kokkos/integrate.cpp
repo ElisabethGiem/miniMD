@@ -125,8 +125,10 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
   //Way way too many errors:
   //KokkosResilience::global_error_settings = KokkosResilience::Error(0.001);
 //  KokkosResilience::global_error_settings = KokkosResilience::Error(0.0000001);
-  //100x more for omp than cuda_integrate vvv
+  //100x more for omp than cuda_integrate vvv 1-40 timesteps
   KokkosResilience::global_error_settings = KokkosResilience::Error(0.00000000001);  
+  //KokkosResilience::global_error_settings = KokkosResilience::Error(0);
+
 #endif
   std::chrono::duration<long int, std::nano> initial_integrate_time{};
   std::chrono::duration<long int, std::nano> final_integrate_time{};
@@ -361,6 +363,7 @@ void Integrate::run(Atom &atom, Force* force, Neighbor &neighbor,
 #ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION 
   KokkosResilience::print_total_error_time();
   KokkosResilience::clear_duplicates_cache();
+  KokkosResilience::finalize_cleanup_duplicates_map();
   KokkosResilience::global_error_settings.reset();
 #endif
 }

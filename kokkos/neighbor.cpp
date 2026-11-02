@@ -49,9 +49,15 @@ Neighbor::Neighbor(int ntypes_)
   halfneigh = 0;
   ghost_newton = 1;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  cutneighsq = res_float_1d_view_type("Neighbor::cutneighsq",ntypes*ntypes);
+  new_maxneighs = res_int_1d_view_type("Neighbor::new_maxneighs",1);
+  h_new_maxneighs = Kokkos::create_mirror_view(new_maxneighs);
+#else  
   cutneighsq = float_1d_view_type("Neighbor::cutneighsq",ntypes*ntypes);
   new_maxneighs = int_1d_view_type("Neighbor::new_maxneighs",1);
   h_new_maxneighs = Kokkos::create_mirror_view(new_maxneighs);
+#endif
   team_neigh_build = 0;
 
   shared_mem_size = 0;
@@ -146,7 +152,11 @@ void Neighbor::build(Atom &atom)
     if(h_new_maxneighs(0) > maxneighs) {
       resize = 1;
       maxneighs = h_new_maxneighs(0) * 1.2;
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      neighbors = res_int_2d_view_type("Neighbor::neighbors", nmax , maxneighs);
+#else
       neighbors = int_2d_view_type("Neighbor::neighbors", nmax , maxneighs);
+#endif
     }
   }
 }
@@ -414,21 +424,28 @@ void Neighbor::binatoms(Atom &atom, int count)
 
 
   /* repeat if running out of space */
-
+  int whilecounter=0;
   while(resize > 0) {
     Kokkos::fence();
     resize = 0;
 
     Kokkos::deep_copy(bincount,0);
     Kokkos::deep_copy(bin_has_local,0);
-
+    
     Kokkos::fence();
+    whilecounter++;
+    printf("HOST CHECK: whileitr=%d, bincount label=%s, extent(0)=%d, ptr=%p\n", whilecounter,
+       bincount.label().c_str(), (int)bincount.extent(0), bincount.data());
     /* count aotms in each bin */
     Kokkos::parallel_reduce(Kokkos::RangePolicy<TagNeighborBinning>(0,nall), *this, resize);
 
     if(resize) {
       atoms_per_bin *= 2;
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+      bins = res_int_2d_view_type("Neighbor::bins", mbins , atoms_per_bin);
+#else
       bins = int_2d_view_type("Neighbor::bins", mbins , atoms_per_bin);
+#endif
     }
   }
 
@@ -620,8 +637,13 @@ int Neighbor::setup(Atom &atom)
 
   nmax = (2 * nextz + 1) * (2 * nexty + 1) * (2 * nextx + 1);
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  stencil = res_int_1d_view_type("Neighbor::stencil", nmax);
+  res_int_1d_view_type::HostMirror h_stencil = Kokkos::create_mirror_view(stencil);
+#else
   stencil = int_1d_view_type("Neighbor::stencil", nmax);
   int_1d_host_view_type h_stencil = Kokkos::create_mirror_view(stencil);
+#endif
   nstencil = 0;
   int kstart = -nextz;
 
@@ -644,10 +666,17 @@ int Neighbor::setup(Atom &atom)
   Kokkos::deep_copy(stencil,h_stencil);
   mbins = mbinx * mbiny * mbinz;
 
+#ifdef KOKKOS_ENABLE_RESILIENT_EXECUTION
+  bincount = res_int_1d_view_type("Neighbor::bincount",mbins);
+  bin_has_local = res_int_1d_view_type("Neighbor::bin_has_local",mbins);
+  bin_list = res_int_1d_view_type("Neighbor::bin_list",mbins);
+  bins = res_int_2d_view_type("Neighbor::bins",mbins , atoms_per_bin);
+#else
   bincount = int_1d_view_type("Neighbor::bincount",mbins);
   bin_has_local = int_1d_view_type("Neighbor::bin_has_local",mbins);
   bin_list = int_1d_view_type("Neighbor::bin_list",mbins);
   bins = int_2d_view_type("Neighbor::bins",mbins , atoms_per_bin);
+#endif
 
   return 0;
 }
